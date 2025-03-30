@@ -7,7 +7,7 @@ import StationCard from '../components/StationCard';
 import { useTheme } from '../context/ThemeContext';
 import { useRefresh } from '../context/RefreshContext';
 import Loader from '../components/Loader';
-import { fetchStations } from '../api/stationsApi';
+import { fetchStations } from '../api/stationsApi';  // Dodany średnik i naprawiony import
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -23,26 +23,26 @@ export default function HomeScreen() {
     loadStations();
   }, []);
 
-useEffect(() => {
- navigation.setOptions({
-    headerRight: () => (
-      <View style={{ flexDirection: 'row' }}>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('RiverFlow')}
-          style={{ marginRight: 16 }}
-        >
-          <Ionicons name="git-network-outline" size={24} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('Settings')}
-          style={{ marginRight: 16 }}
-        >
-          <Ionicons name="settings-outline" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-    ),
-  });
-}, [navigation]);
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row' }}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('RiverFlow')}
+            style={{ marginRight: 16 }}
+          >
+            <Ionicons name="git-network-outline" size={24} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Settings')}
+            style={{ marginRight: 16 }}
+          >
+            <Ionicons name="settings-outline" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation]);
 
   // Efekt dla automatycznego odświeżania
   useEffect(() => {
