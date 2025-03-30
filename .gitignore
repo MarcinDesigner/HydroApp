@@ -1,0 +1,48 @@
+# 👉 Node.js & npm
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# 👉 Expo
+.expo/
+.expo-shared/
+*.expo
+
+# 👉 Build output
+/dist/
+build/
+web-build/
+android/
+ios/
+
+# 👉 Systemowe / OS
+.DS_Store
+Thumbs.db
+
+# 👉 Środowiska (hasła, API keys itd.)
+.env
+.env.*.local
+.env.local
+.env.production
+.env.development
+
+# 👉 Testy i pokrycie testów
+coverage/
+*.lcov
+
+# 👉 VSCode / IntelliJ / inne edytory
+.vscode/
+.idea/
+
+# 👉 Logs
+*.log
+logs/
+debug.log
+
+# 👉 macOS metadata
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
