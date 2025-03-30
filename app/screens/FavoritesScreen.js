@@ -1,70 +1,150 @@
-// Plik: app/context/FavoritesContext.js
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// Plik: app/screens/FavoritesScreen.js
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
+import { useFavorites } from '../context/FavoritesContext';
+import { useRefresh } from '../context/RefreshContext';
+import StationCard from '../components/StationCard';
+import Loader from '../components/Loader';
+import { fetchStations } from '../api/stationsApi';
 
-const FavoritesContext = createContext();
+export default function FavoritesScreen() {
+  const navigation = useNavigation();
+  const { theme } = useTheme();
+  const { favorites: favoriteIds } = useFavorites();
+  const { isRefreshing, addListener, removeListener } = useRefresh();
+  const [favoriteStations, setFavoriteStations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-export const FavoritesProvider = ({ children }) => {
-  const [favorites, setFavorites] = useState([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // Ładowanie ulubionych stacji z AsyncStorage przy uruchomieniu
   useEffect(() => {
-    const loadFavorites = async () => {
-      try {
-        const savedFavorites = await AsyncStorage.getItem('favorites');
-        if (savedFavorites !== null) {
-          setFavorites(JSON.parse(savedFavorites));
-        }
-      } catch (error) {
-        console.error('Błąd podczas ładowania ulubionych stacji:', error);
-      } finally {
-        setIsLoaded(true);
-      }
+    loadFavorites();
+  }, [favoriteIds]); // Przeładuj gdy zmienią się ulubione ID
+
+  // Efekt dla automatycznego odświeżania
+  useEffect(() => {
+    // Rejestrujemy funkcję odświeżania w kontekście
+    const onRefreshCallback = () => {
+      loadFavorites(true); // true = cicha aktualizacja (bez wskaźnika ładowania)
     };
 
-    loadFavorites();
+    // Dodaj listener dla globalnego refreshData
+    addListener(onRefreshCallback);
+
+    // Cleanup
+    return () => {
+      removeListener(onRefreshCallback);
+    };
   }, []);
 
-  // Zapisywanie ulubionych stacji do AsyncStorage przy zmianie
-  useEffect(() => {
-    const saveFavorites = async () => {
-      if (!isLoaded) return;
-      
-      try {
-        await AsyncStorage.setItem('favorites', JSON.stringify(favorites));
-      } catch (error) {
-        console.error('Błąd podczas zapisywania ulubionych stacji:', error);
+  const loadFavorites = async (silent = false) => {
+    if (favoriteIds.length === 0) {
+      setFavoriteStations([]);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    try {
+      if (!silent) {
+        setRefreshing(true);
       }
-    };
-
-    saveFavorites();
-  }, [favorites, isLoaded]);
-
-  // Sprawdzanie czy stacja jest ulubiona
-  const isFavorite = (stationId) => {
-    return favorites.some(id => id === stationId);
-  };
-
-  // Dodawanie lub usuwanie stacji z ulubionych
-  const toggleFavorite = (stationId) => {
-    if (isFavorite(stationId)) {
-      setFavorites(favorites.filter(id => id !== stationId));
-    } else {
-      setFavorites([...favorites, stationId]);
+      
+      const allStations = await fetchStations();
+      
+      // Filtruj tylko stacje, które są w ulubionych
+      const favorites = allStations.filter(station => 
+        favoriteIds.includes(station.id)
+      );
+      
+      setFavoriteStations(favorites);
+      setLoading(false);
+      setRefreshing(false);
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  return (
-    <FavoritesContext.Provider value={{ 
-      favorites, 
-      isFavorite, 
-      toggleFavorite, 
-      isLoaded 
-    }}>
-      {children}
-    </FavoritesContext.Provider>
-  );
-};
+  const handleStationPress = (station) => {
+    navigation.navigate('StationDetails', { 
+      stationId: station.id,
+      stationName: station.name
+    });
+  };
 
-export const useFavorites = () => useContext(FavoritesContext);
+  if (favoriteIds.length === 0) {
+    return (
+      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
+        <Ionicons 
+          name="heart-outline" 
+          size={64} 
+          color={theme.dark ? '#555' : '#CCC'} 
+        />
+        <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+          Brak ulubionych stacji
+        </Text>
+        <Text style={[styles.emptySubtitle, { color: theme.dark ? '#AAA' : '#666' }]}>
+          Dodaj stacje do ulubionych, aby szybko sprawdzać ich stan
+        </Text>
+      </View>
+    );
+  }
+
+  if (loading && !refreshing) {
+    return <Loader message="Ładowanie ulubionych stacji..." />;
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <FlatList
+        data={favoriteStations}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <StationCard
+            station={item}
+            onPress={() => handleStationPress(item)}
+          />
+        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing || isRefreshing}
+            onRefresh={loadFavorites}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
+        }
+        contentContainerStyle={styles.list}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  list: {
+    padding: 16,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+});

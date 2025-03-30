@@ -29,7 +29,7 @@ export const ThemeProvider = ({ children }) => {
     };
 
     loadSavedTheme();
-  }, []);
+  }, [deviceTheme]);
 
   // Automatyczne dostosowanie do zmian motywu systemowego, jeśli użytkownik nie wybrał ręcznie
   useEffect(() => {

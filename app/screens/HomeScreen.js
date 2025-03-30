@@ -12,7 +12,7 @@ import { fetchStations } from '../api/stationsApi';
 export default function HomeScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
-  const { refreshData, isRefreshing, lastRefreshTime } = useRefresh();
+  const { refreshData, isRefreshing, lastRefreshTime, addListener, removeListener } = useRefresh();
   const [stations, setStations] = useState([]);
   const [filteredStations, setFilteredStations] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,11 +31,11 @@ export default function HomeScreen() {
     };
 
     // Dodaj listener dla globalnego refreshData
-    refreshData.addListener(onRefreshCallback);
+    addListener(onRefreshCallback);
 
     // Cleanup
     return () => {
-      refreshData.removeListener(onRefreshCallback);
+      removeListener(onRefreshCallback);
     };
   }, []);
 

@@ -1,4 +1,4 @@
-// Plik: app/App.js
+// Plik: App.js
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -6,6 +6,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+
+// Konteksty
 import { ThemeProvider } from './app/context/ThemeContext';
 import { FavoritesProvider } from './app/context/FavoritesContext';
 import { RefreshProvider } from './app/context/RefreshContext';

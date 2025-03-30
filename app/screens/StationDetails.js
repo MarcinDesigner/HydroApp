@@ -27,7 +27,7 @@ export default function StationDetails() {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { refreshData, isRefreshing } = useRefresh();
+  const { isRefreshing, addListener, removeListener } = useRefresh();
   const { stationId } = route.params;
   const [station, setStation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,11 +65,11 @@ export default function StationDetails() {
     };
 
     // Dodaj listener dla globalnego refreshData
-    refreshData.addListener(onRefreshCallback);
+    addListener(onRefreshCallback);
 
     // Cleanup
     return () => {
-      refreshData.removeListener(onRefreshCallback);
+      removeListener(onRefreshCallback);
     };
   }, [stationId]);
 
@@ -117,93 +117,106 @@ export default function StationDetails() {
   }
 
   return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing || isRefreshing}
-          onRefresh={onRefresh}
-          colors={[theme.colors.primary]}
-          tintColor={theme.colors.primary}
-        />
-      }
-    >
-      <StationInfo station={station} theme={theme} />
-      
-      <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
-          Poziom wody w czasie
-        </Text>
+  <ScrollView 
+    style={[styles.container, { backgroundColor: theme.colors.background }]}
+    refreshControl={
+      <RefreshControl
+        refreshing={refreshing || isRefreshing}
+        onRefresh={onRefresh}
+        colors={[theme.colors.primary]}
+        tintColor={theme.colors.primary}
+      />
+    }
+  >
+    {station ? (
+      <>
+        <StationInfo station={station} theme={theme} />
         
-        <View style={styles.timeRangeContainer}>
-          {['24h', '7d', '30d'].map(range => (
-            <TouchableOpacity
-              key={range}
-              style={[
-                styles.timeRangeButton,
-                timeRange === range && { backgroundColor: theme.colors.primary }
-              ]}
-              onPress={() => setTimeRange(range)}
-            >
-              <Text 
+        <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+            Poziom wody w czasie
+          </Text>
+          
+          <View style={styles.timeRangeContainer}>
+            {['24h', '7d', '30d'].map(range => (
+              <TouchableOpacity
+                key={range}
                 style={[
-                  styles.timeRangeText,
-                  timeRange === range && { color: 'white' }
+                  styles.timeRangeButton,
+                  timeRange === range && { backgroundColor: theme.colors.primary }
                 ]}
+                onPress={() => setTimeRange(range)}
               >
-                {range === '24h' ? '24 godz.' : range === '7d' ? '7 dni' : '30 dni'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text 
+                  style={[
+                    styles.timeRangeText,
+                    timeRange === range && { color: 'white' }
+                  ]}
+                >
+                  {range === '24h' ? '24 godz.' : range === '7d' ? '7 dni' : '30 dni'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          {station.chartData && station.chartData[timeRange] && (
+            <LineChart
+              data={{
+                labels: station.chartData[timeRange].labels,
+                datasets: [
+                  {
+                    data: station.chartData[timeRange].values,
+                    color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                    strokeWidth: 2
+                  }
+                ]
+              }}
+              width={Dimensions.get('window').width - 64}
+              height={220}
+              chartConfig={{
+                backgroundColor: theme.colors.card,
+                backgroundGradientFrom: theme.colors.card,
+                backgroundGradientTo: theme.colors.card,
+                decimalPlaces: 0,
+                color: (opacity = 1) => 
+                  theme.dark 
+                    ? `rgba(255, 255, 255, ${opacity})` 
+                    : `rgba(0, 0, 0, ${opacity})`,
+                labelColor: (opacity = 1) => 
+                  theme.dark 
+                    ? `rgba(255, 255, 255, ${opacity})` 
+                    : `rgba(0, 0, 0, ${opacity})`,
+                style: {
+                  borderRadius: 16
+                },
+                propsForDots: {
+                  r: "4",
+                  strokeWidth: "2",
+                  stroke: theme.colors.primary
+                }
+              }}
+              bezier
+              style={{
+                marginVertical: 8,
+                borderRadius: 16
+              }}
+            />
+          )}
         </View>
         
-        <LineChart
-          data={{
-            labels: station.chartData[timeRange].labels,
-            datasets: [
-              {
-                data: station.chartData[timeRange].values,
-                color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-                strokeWidth: 2
-              }
-            ]
-          }}
-          width={Dimensions.get('window').width - 64}
-          height={220}
-          chartConfig={{
-            backgroundColor: theme.colors.card,
-            backgroundGradientFrom: theme.colors.card,
-            backgroundGradientTo: theme.colors.card,
-            decimalPlaces: 0,
-            color: (opacity = 1) => 
-              theme.dark 
-                ? `rgba(255, 255, 255, ${opacity})` 
-                : `rgba(0, 0, 0, ${opacity})`,
-            labelColor: (opacity = 1) => 
-              theme.dark 
-                ? `rgba(255, 255, 255, ${opacity})` 
-                : `rgba(0, 0, 0, ${opacity})`,
-            style: {
-              borderRadius: 16
-            },
-            propsForDots: {
-              r: "4",
-              strokeWidth: "2",
-              stroke: theme.colors.primary
-            }
-          }}
-          bezier
-          style={{
-            marginVertical: 8,
-            borderRadius: 16
-          }}
-        />
+        <AlertsPanel station={station} theme={theme} />
+        <ForecastPanel station={station} theme={theme} />
+      </>
+    ) : (
+      <View style={styles.loadingContainer}>
+        <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+          Ładowanie danych stacji...
+        </Text>
       </View>
-      
-      <AlertsPanel station={station} theme={theme} />
-      <ForecastPanel station={station} theme={theme} />
-    </ScrollView>
-  );
+    )}
+  </ScrollView>
+)
+  
 }
 
 const styles = StyleSheet.create({
@@ -214,6 +227,7 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
   },
+
   headerButton: {
     marginLeft: 16,
   },
@@ -247,4 +261,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555555',
   },
+  loadingContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingVertical: 50,
+},
+loadingText: {
+  fontSize: 16,
+  textAlign: 'center',
+}
 });

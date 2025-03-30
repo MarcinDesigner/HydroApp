@@ -12,7 +12,7 @@ import { fetchStations } from '../api/stationsApi';
 export default function MapScreen() {
   const navigation = useNavigation();
   const { theme, isDarkMode } = useTheme();
-  const { refreshData, isRefreshing } = useRefresh();
+  const { isRefreshing, addListener, removeListener } = useRefresh();
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,11 +35,11 @@ export default function MapScreen() {
     };
 
     // Dodaj listener dla globalnego refreshData
-    refreshData.addListener(onRefreshCallback);
+    addListener(onRefreshCallback);
 
     // Cleanup
     return () => {
-      refreshData.removeListener(onRefreshCallback);
+      removeListener(onRefreshCallback);
     };
   }, []);
 

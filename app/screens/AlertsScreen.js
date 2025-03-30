@@ -10,7 +10,7 @@ import Loader from '../components/Loader';
 export default function AlertsScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
-  const { refreshData, isRefreshing } = useRefresh();
+  const { isRefreshing, addListener, removeListener } = useRefresh();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,11 +27,11 @@ export default function AlertsScreen() {
     };
 
     // Dodaj listener dla globalnego refreshData
-    refreshData.addListener(onRefreshCallback);
+    addListener(onRefreshCallback);
 
     // Cleanup
     return () => {
-      refreshData.removeListener(onRefreshCallback);
+      removeListener(onRefreshCallback);
     };
   }, []);
 

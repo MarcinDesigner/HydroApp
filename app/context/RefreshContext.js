@@ -134,13 +134,6 @@ export const RefreshProvider = ({ children }) => {
     }, 1500);
   }, [isRefreshing, isConnected]);
 
-  // Funkcja do zmiany interwału odświeżania
-  const changeRefreshInterval = async (newInterval) => {
-    if (REFRESH_INTERVALS[newInterval]) {
-      setRefreshInterval(newInterval);
-    }
-  };
-
   // Funkcje do zarządzania listenerami
   const addListener = (listener) => {
     listenersRef.current.push(listener);
@@ -156,7 +149,11 @@ export const RefreshProvider = ({ children }) => {
       lastRefreshTime,
       isRefreshing,
       isConnected,
-      changeRefreshInterval,
+      changeRefreshInterval: async (newInterval) => {
+        if (REFRESH_INTERVALS[newInterval]) {
+          setRefreshInterval(newInterval);
+        }
+      },
       refreshData,
       addListener,
       removeListener,
