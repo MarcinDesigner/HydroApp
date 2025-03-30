@@ -19,7 +19,7 @@ import { useRefresh } from '../context/RefreshContext';
 import Loader from '../components/Loader';
 import StationInfo from '../components/StationInfo';
 import AlertsPanel from '../components/AlertsPanel';
-import ForecastPanel from '../components/ForecastPanel';
+import WeatherPanel from '../components/WeatherPanel';
 import { fetchStationDetails } from '../api/stationsApi';
 
 export default function StationDetails() {
@@ -205,7 +205,7 @@ export default function StationDetails() {
         </View>
         
         <AlertsPanel station={station} theme={theme} />
-        <ForecastPanel station={station} theme={theme} />
+        <WeatherPanel station={station} theme={theme} />
       </>
     ) : (
       <View style={styles.loadingContainer}>
@@ -214,6 +214,18 @@ export default function StationDetails() {
         </Text>
       </View>
     )}
+<View style={styles.actionButtonsContainer}>
+  {station && station.river && (
+    <TouchableOpacity
+      style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+      onPress={() => navigation.navigate('RiverFlow', { riverName: station.river })}
+    >
+      <Ionicons name="git-network-outline" size={20} color="white" style={styles.actionButtonIcon} />
+      <Text style={styles.actionButtonText}>Zobacz przepływ rzeki {station.river}</Text>
+    </TouchableOpacity>
+  )}
+</View>
+
   </ScrollView>
 )
   
@@ -270,5 +282,44 @@ const styles = StyleSheet.create({
 loadingText: {
   fontSize: 16,
   textAlign: 'center',
-}
+},
+actionButtonsContainer: {
+    marginVertical: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  actionButtonIcon: {
+    marginRight: 8,
+  },
+  actionButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  actionButtonsContainer: {
+  marginVertical: 16,
+},
+actionButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 8,
+},
+actionButtonIcon: {
+  marginRight: 8,
+},
+actionButtonText: {
+  color: 'white',
+  fontWeight: 'bold',
+  fontSize: 14,
+},
+
 });

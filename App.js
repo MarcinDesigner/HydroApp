@@ -19,6 +19,7 @@ import StationDetails from './app/screens/StationDetails';
 import SettingsScreen from './app/screens/SettingsScreen';
 import FavoritesScreen from './app/screens/FavoritesScreen';
 import AlertsScreen from './app/screens/AlertsScreen';
+import RiverFlowScreen from './app/screens/RiverFlowScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -111,6 +112,11 @@ export default function App() {
                   name="Settings" 
                   component={SettingsScreen} 
                   options={{ title: 'Ustawienia' }} 
+                />
+                <Stack.Screen 
+                  name="RiverFlow" 
+                  component={RiverFlowScreen} 
+                  options={{ title: 'Przepływ rzek' }} 
                 />
               </Stack.Navigator>
             </NavigationContainer>

@@ -1,6 +1,6 @@
 // Plik: app/screens/HomeScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, StyleSheet, RefreshControl, TextInput } from 'react-native';
+import { View, FlatList, StyleSheet, RefreshControl, TextInput, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import StationCard from '../components/StationCard';
@@ -23,17 +23,35 @@ export default function HomeScreen() {
     loadStations();
   }, []);
 
+useEffect(() => {
+ navigation.setOptions({
+    headerRight: () => (
+      <View style={{ flexDirection: 'row' }}>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('RiverFlow')}
+          style={{ marginRight: 16 }}
+        >
+          <Ionicons name="git-network-outline" size={24} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('Settings')}
+          style={{ marginRight: 16 }}
+        >
+          <Ionicons name="settings-outline" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
+    ),
+  });
+}, [navigation]);
+
   // Efekt dla automatycznego odświeżania
   useEffect(() => {
-    // Rejestrujemy funkcję odświeżania w kontekście
     const onRefreshCallback = () => {
       loadStations(true); // true = cicha aktualizacja (bez wskaźnika ładowania)
     };
 
-    // Dodaj listener dla globalnego refreshData
     addListener(onRefreshCallback);
 
-    // Cleanup
     return () => {
       removeListener(onRefreshCallback);
     };

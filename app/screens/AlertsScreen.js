@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useRefresh } from '../context/RefreshContext';
 import Loader from '../components/Loader';
+import { fetchAlerts, fetchMeteoWarnings } from '../api/stationsApi';
 
 export default function AlertsScreen() {
   const navigation = useNavigation();
@@ -14,6 +15,7 @@ export default function AlertsScreen() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadAlerts();
@@ -35,75 +37,57 @@ export default function AlertsScreen() {
     };
   }, []);
 
-  const loadAlerts = (silent = false) => {
-    // Symulowane dane alertów
-    if (!silent) {
-      setRefreshing(true);
-    }
-
-    setTimeout(() => {
-      setAlerts([
-        {
-          id: 1,
-          stationId: 1,
-          stationName: 'Płock',
-          river: 'Wisła',
-          type: 'alarm',
-          message: 'Przekroczony stan alarmowy o 22 cm',
-          time: '14:00, 30.03.2025',
-          isRead: false
-        },
-        {
-          id: 2,
-          stationId: 1,
-          stationName: 'Płock',
-          river: 'Wisła',
-          type: 'info',
-          message: 'Wprowadzono alarm przeciwpowodziowy w powiecie',
-          time: '10:30, 30.03.2025',
-          isRead: true
-        },
-        {
-          id: 3,
-          stationId: 2,
-          stationName: 'Warszawa',
-          river: 'Wisła',
-          type: 'warning',
-          message: 'Przekroczony stan ostrzegawczy o 18 cm',
-          time: '14:30, 30.03.2025',
-          isRead: false
-        },
-        {
-          id: 4,
-          stationId: 5,
-          stationName: 'Opole',
-          river: 'Odra',
-          type: 'warning',
-          message: 'Przekroczony stan ostrzegawczy o 5 cm',
-          time: '09:15, 30.03.2025',
-          isRead: true
-        }
+  const loadAlerts = async (silent = false) => {
+    try {
+      if (!silent) {
+        setRefreshing(true);
+      }
+      
+      // Pobierz oba rodzaje alertów równolegle
+      const [hydroAlerts, meteoAlerts] = await Promise.all([
+        fetchAlerts(),
+        fetchMeteoWarnings()
       ]);
       
-      setLoading(false);
-      setRefreshing(false);
-    }, 1000);
+      // Połącz alerty i posortuj wg daty (najnowsze na górze)
+      const allAlerts = [...hydroAlerts, ...meteoAlerts].sort((a, b) => {
+        // Zakładamy, że czas jest w formacie, który można porównywać stringowo
+        return b.time?.localeCompare(a.time || '') || 0;
+      });
+      
+      setAlerts(allAlerts);
+      setError(null);
+      
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    } catch (error) {
+      console.error('Błąd podczas ładowania alertów:', error);
+      setError(error.message || 'Nie udało się pobrać alertów.');
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
   };
 
   const handleAlertPress = (alert) => {
-    navigation.navigate('StationDetails', { 
-      stationId: alert.stationId,
-      stationName: alert.stationName
-    });
-    
-    // Oznaczamy alert jako przeczytany
-    setAlerts(currentAlerts => 
-      currentAlerts.map(item => 
-        item.id === alert.id 
-          ? { ...item, isRead: true } 
-          : item
-      )
-    );
+    if (alert.stationId) {
+      navigation.navigate('StationDetails', { 
+        stationId: alert.stationId,
+        stationName: alert.stationName
+      });
+      
+      // Oznaczamy alert jako przeczytany
+      setAlerts(currentAlerts => 
+        currentAlerts.map(item => 
+          item.id === alert.id 
+            ? { ...item, isRead: true } 
+            : item
+        )
+      );
+    }
   };
 
   const getAlertIcon = (type) => {
@@ -123,6 +107,30 @@ export default function AlertsScreen() {
       default: return theme.colors.text;
     }
   };
+
+  if (error) {
+    return (
+      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
+        <Ionicons 
+          name="cloud-offline-outline" 
+          size={64} 
+          color={theme.dark ? '#555' : '#CCC'} 
+        />
+        <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+          Błąd połączenia
+        </Text>
+        <Text style={[styles.emptySubtitle, { color: theme.dark ? '#AAA' : '#666' }]}>
+          {error}
+        </Text>
+        <TouchableOpacity 
+          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+          onPress={() => loadAlerts()}
+        >
+          <Text style={styles.retryText}>Spróbuj ponownie</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading && !refreshing) {
     return <Loader message="Ładowanie alertów..." />;
@@ -150,7 +158,7 @@ export default function AlertsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <FlatList
         data={alerts}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
         renderItem={({ item }) => (
           <TouchableOpacity 
             style={[
@@ -175,8 +183,13 @@ export default function AlertsScreen() {
             </View>
             
             <View style={styles.alertContent}>
+              {item.title && (
+                <Text style={[styles.alertTitle, { color: theme.colors.text }]}>
+                  {item.title}
+                </Text>
+              )}
               <Text style={[styles.stationName, { color: theme.colors.text }]}>
-                {item.stationName} ({item.river})
+                {item.stationName} {item.river ? `(${item.river})` : ''}
               </Text>
               <Text style={[styles.alertMessage, { color: theme.colors.text }]}>
                 {item.message}
@@ -260,6 +273,11 @@ const styles = StyleSheet.create({
   alertContent: {
     flex: 1,
   },
+  alertTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
   stationName: {
     fontSize: 14,
     fontWeight: '500',
@@ -271,5 +289,16 @@ const styles = StyleSheet.create({
   },
   alertTime: {
     fontSize: 12,
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
