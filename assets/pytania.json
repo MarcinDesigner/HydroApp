@@ -1,0 +1,57 @@
+[
+  {
+    "id": 1,
+    "question": "Co oznacza ten znak wodny?",
+    "image": "images/znak_strefa_ciszy.png",
+    "options": [
+      "Zakaz wchodzenia na akwen",
+      "Strefa ciszy – zakaz używania silników",
+      "Zakaz żeglugi w godzinach nocnych"
+    ],
+    "correctAnswerIndex": 1
+  },
+  {
+    "id": 2,
+    "question": "Jak powinien zachować się jacht pod żaglami wobec statku towarowego na torze wodnym?",
+    "image": "images/statek_towarowy.png",
+    "options": [
+      "Zachować kurs i prędkość",
+      "Ustąpić pierwszeństwa statkowi towarowemu",
+      "Nadać sygnał dźwiękowy i kontynuować kurs"
+    ],
+    "correctAnswerIndex": 1
+  },
+  {
+    "id": 3,
+    "question": "Jakie światła pokazuje statek żaglowy żeglujący w nocy?",
+    "image": "images/swiatla_zaglowki.png",
+    "options": [
+      "Zielone i czerwone światło na maszcie oraz białe rufowe",
+      "Tylko czerwone światło",
+      "Żółte błyskające światło na dziobie"
+    ],
+    "correctAnswerIndex": 0
+  },
+  {
+    "id": 4,
+    "question": "Który węzeł najlepiej nadaje się do wiązania dwóch lin tej samej grubości?",
+    "image": "images/wezel_prosty.png",
+    "options": [
+      "Węzeł płaski (prostyi)",
+      "Węzeł ratowniczy",
+      "Węzeł cumowniczy"
+    ],
+    "correctAnswerIndex": 0
+  },
+  {
+    "id": 5,
+    "question": "Co oznacza flaga 'N' podniesiona na jachcie?",
+    "image": "images/flaga_n.png",
+    "options": [
+      "Niebezpieczeństwo – wróć do portu",
+      "Nie – twoja odpowiedź negatywna",
+      "Zakaz opuszczania jednostki"
+    ],
+    "correctAnswerIndex": 1
+  }
+]
