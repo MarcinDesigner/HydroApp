@@ -109,34 +109,13 @@ export const fetchStationDetails = async (stationId) => {
     console.log("Stacja hydro:", station.stacja);
     console.log("Znaleziona stacja synop:", weatherStation?.stacja);
     
-    // Jeśli nie znaleziono dokładnego dopasowania, szukaj stacji z podobną nazwą
+
     if (!weatherStation) {
-      weatherStation = weatherData.find(w => 
-        w.stacja && station.stacja && 
-        (w.stacja.toLowerCase().includes(station.stacja.toLowerCase()) || 
-         station.stacja.toLowerCase().includes(w.stacja.toLowerCase()))
-      );
-    }
-
-    // Jeśli nadal nie znaleziono, szukaj stacji w tym samym województwie
-    if (!weatherStation && station.województwo) {
-      const stationsInRegion = weatherData.filter(w => {
-        // Tu możemy dodać mapowanie stacji pogodowych do województw,
-        // ale na potrzeby przykładu po prostu bierzemy pierwszą znalezioną stację
-        return true;
-      });
-      
-      if (stationsInRegion.length > 0) {
-        weatherStation = stationsInRegion[0];
-      }
-    }
-
-    // Jeśli nadal nie znaleziono, użyj pierwszej dostępnej stacji
-    if (!weatherStation && weatherData.length > 0) {
-      weatherStation = weatherData[0];
-    }
-
-    console.log("Wybrana stacja pogodowa:", weatherStation?.stacja);
+  // Nie przypisuj żadnej domyślnej stacji, jeśli nie znaleziono dopasowania
+  console.log("Brak dopasowania stacji pogodowej dla:", station.stacja);
+} else {
+  console.log("Wybrana stacja pogodowa:", weatherStation.stacja);
+}
     
     // Wyciągnięcie godziny pomiaru z pełnej daty
     const measurementDateTime = station.stan_wody_data_pomiaru ? 

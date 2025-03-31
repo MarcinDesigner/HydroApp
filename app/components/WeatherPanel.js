@@ -4,8 +4,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function WeatherPanel({ station, theme }) {
-  // Dodajmy logowanie, aby zobaczyć co otrzymujemy
-  console.log("Dane stacji w WeatherPanel:", station);
+  // Ustalenie właściwej lokalizacji dla pogody
+  // Priorytetowo traktujemy lokalizację stacji synoptycznej, jeśli jest dostępna
+  const weatherLocation = station.synopStationName || station.name || 'Brak danych';
   
   return (
     <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
@@ -27,7 +28,7 @@ export default function WeatherPanel({ station, theme }) {
             Lokalizacja
           </Text>
           <Text style={[styles.weatherValue, { color: theme.colors.text }]}>
-            {station.synopStationName || station.name || 'Brak danych'}
+            {weatherLocation}
           </Text>
         </View>
       </View>
