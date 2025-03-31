@@ -19,7 +19,6 @@ import { useRefresh } from '../context/RefreshContext';
 import Loader from '../components/Loader';
 import StationInfo from '../components/StationInfo';
 import AlertsPanel from '../components/AlertsPanel';
-import WeatherPanel from '../components/WeatherPanel';
 import { fetchStationDetails } from '../api/stationsApi';
 
 export default function StationDetails() {
@@ -117,118 +116,116 @@ export default function StationDetails() {
   }
 
   return (
-  <ScrollView 
-    style={[styles.container, { backgroundColor: theme.colors.background }]}
-    refreshControl={
-      <RefreshControl
-        refreshing={refreshing || isRefreshing}
-        onRefresh={onRefresh}
-        colors={[theme.colors.primary]}
-        tintColor={theme.colors.primary}
-      />
-    }
-  >
-    {station ? (
-      <>
-        <StationInfo station={station} theme={theme} />
-        
-        <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
-            Poziom wody w czasie
-          </Text>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing || isRefreshing}
+          onRefresh={onRefresh}
+          colors={[theme.colors.primary]}
+          tintColor={theme.colors.primary}
+        />
+      }
+    >
+      {station ? (
+        <>
+          <StationInfo station={station} theme={theme} />
           
-          <View style={styles.timeRangeContainer}>
-            {['24h', '7d', '30d'].map(range => (
-              <TouchableOpacity
-                key={range}
-                style={[
-                  styles.timeRangeButton,
-                  timeRange === range && { backgroundColor: theme.colors.primary }
-                ]}
-                onPress={() => setTimeRange(range)}
-              >
-                <Text 
+          <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+              Poziom wody w czasie
+            </Text>
+            
+            <View style={styles.timeRangeContainer}>
+              {['24h', '7d', '30d'].map(range => (
+                <TouchableOpacity
+                  key={range}
                   style={[
-                    styles.timeRangeText,
-                    timeRange === range && { color: 'white' }
+                    styles.timeRangeButton,
+                    timeRange === range && { backgroundColor: theme.colors.primary }
                   ]}
+                  onPress={() => setTimeRange(range)}
                 >
-                  {range === '24h' ? '24 godz.' : range === '7d' ? '7 dni' : '30 dni'}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text 
+                    style={[
+                      styles.timeRangeText,
+                      timeRange === range && { color: 'white' }
+                    ]}
+                  >
+                    {range === '24h' ? '24 godz.' : range === '7d' ? '7 dni' : '30 dni'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            {station.chartData && station.chartData[timeRange] && (
+              <LineChart
+                data={{
+                  labels: station.chartData[timeRange].labels,
+                  datasets: [
+                    {
+                      data: station.chartData[timeRange].values,
+                      color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                      strokeWidth: 2
+                    }
+                  ]
+                }}
+                width={Dimensions.get('window').width - 64}
+                height={220}
+                chartConfig={{
+                  backgroundColor: theme.colors.card,
+                  backgroundGradientFrom: theme.colors.card,
+                  backgroundGradientTo: theme.colors.card,
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => 
+                    theme.dark 
+                      ? `rgba(255, 255, 255, ${opacity})` 
+                      : `rgba(0, 0, 0, ${opacity})`,
+                  labelColor: (opacity = 1) => 
+                    theme.dark 
+                      ? `rgba(255, 255, 255, ${opacity})` 
+                      : `rgba(0, 0, 0, ${opacity})`,
+                  style: {
+                    borderRadius: 16
+                  },
+                  propsForDots: {
+                    r: "4",
+                    strokeWidth: "2",
+                    stroke: theme.colors.primary
+                  }
+                }}
+                bezier
+                style={{
+                  marginVertical: 8,
+                  borderRadius: 16
+                }}
+              />
+            )}
           </View>
           
-          {station.chartData && station.chartData[timeRange] && (
-            <LineChart
-              data={{
-                labels: station.chartData[timeRange].labels,
-                datasets: [
-                  {
-                    data: station.chartData[timeRange].values,
-                    color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-                    strokeWidth: 2
-                  }
-                ]
-              }}
-              width={Dimensions.get('window').width - 64}
-              height={220}
-              chartConfig={{
-                backgroundColor: theme.colors.card,
-                backgroundGradientFrom: theme.colors.card,
-                backgroundGradientTo: theme.colors.card,
-                decimalPlaces: 0,
-                color: (opacity = 1) => 
-                  theme.dark 
-                    ? `rgba(255, 255, 255, ${opacity})` 
-                    : `rgba(0, 0, 0, ${opacity})`,
-                labelColor: (opacity = 1) => 
-                  theme.dark 
-                    ? `rgba(255, 255, 255, ${opacity})` 
-                    : `rgba(0, 0, 0, ${opacity})`,
-                style: {
-                  borderRadius: 16
-                },
-                propsForDots: {
-                  r: "4",
-                  strokeWidth: "2",
-                  stroke: theme.colors.primary
-                }
-              }}
-              bezier
-              style={{
-                marginVertical: 8,
-                borderRadius: 16
-              }}
-            />
-          )}
+          <AlertsPanel station={station} theme={theme} />
+        </>
+      ) : (
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+            Ładowanie danych stacji...
+          </Text>
         </View>
-        
-        <AlertsPanel station={station} theme={theme} />
-        <WeatherPanel station={station} theme={theme} />
-      </>
-    ) : (
-      <View style={styles.loadingContainer}>
-        <Text style={[styles.loadingText, { color: theme.colors.text }]}>
-          Ładowanie danych stacji...
-        </Text>
+      )}
+      
+      <View style={styles.actionButtonsContainer}>
+        {station && station.river && (
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+            onPress={() => navigation.navigate('RiverFlow', { riverName: station.river })}
+          >
+            <Ionicons name="git-network-outline" size={20} color="white" style={styles.actionButtonIcon} />
+            <Text style={styles.actionButtonText}>Zobacz przepływ rzeki {station.river}</Text>
+          </TouchableOpacity>
+        )}
       </View>
-    )}
-<View style={styles.actionButtonsContainer}>
-  {station && station.river && (
-    <TouchableOpacity
-      style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
-      onPress={() => navigation.navigate('RiverFlow', { riverName: station.river })}
-    >
-      <Ionicons name="git-network-outline" size={20} color="white" style={styles.actionButtonIcon} />
-      <Text style={styles.actionButtonText}>Zobacz przepływ rzeki {station.river}</Text>
-    </TouchableOpacity>
-  )}
-</View>
-
-  </ScrollView>
-)
-  
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -239,7 +236,6 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
   },
-
   headerButton: {
     marginLeft: 16,
   },
@@ -274,16 +270,16 @@ const styles = StyleSheet.create({
     color: '#555555',
   },
   loadingContainer: {
-  flex: 1,
-  justifyContent: 'center',
-  alignItems: 'center',
-  paddingVertical: 50,
-},
-loadingText: {
-  fontSize: 16,
-  textAlign: 'center',
-},
-actionButtonsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  loadingText: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  actionButtonsContainer: {
     marginVertical: 16,
   },
   actionButton: {
@@ -301,25 +297,5 @@ actionButtonsContainer: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
-  },
-  actionButtonsContainer: {
-  marginVertical: 16,
-},
-actionButton: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 12,
-  borderRadius: 8,
-  marginBottom: 8,
-},
-actionButtonIcon: {
-  marginRight: 8,
-},
-actionButtonText: {
-  color: 'white',
-  fontWeight: 'bold',
-  fontSize: 14,
-},
-
+  }
 });

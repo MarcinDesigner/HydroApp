@@ -24,6 +24,21 @@ export default function StationCard({ station, onPress }) {
     }
   };
 
+  // Formatuj trend z odpowiednim znakiem
+  const formatTrend = (trendValue) => {
+    if (trendValue > 0) return `+${trendValue}`;
+    return trendValue.toString();
+  };
+
+  // Formatuj opis trendu
+  const getTrendDescription = (trend) => {
+    switch (trend) {
+      case 'up': return ' (wzrost)';
+      case 'down': return ' (spadek)';
+      default: return ' (stabilny)';
+    }
+  };
+
   return (
     <TouchableOpacity 
       onPress={onPress}
@@ -74,7 +89,7 @@ export default function StationCard({ station, onPress }) {
                 }
               ]}
             >
-              {station.trendValue || '0'} cm
+              {formatTrend(station.trendValue)} cm{getTrendDescription(station.trend)}
             </Text>
           </View>
           

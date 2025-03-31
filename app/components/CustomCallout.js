@@ -40,7 +40,7 @@ export default function CustomCallout({ station }) {
               }
             ]}
           >
-            {getTrendIcon(station.trend)} {station.trendValue || 0} cm
+  {getTrendIcon(station.trend)} {station.trendValue > 0 ? '+' : ''}{station.trendValue} cm
           </Text>
         </View>
         

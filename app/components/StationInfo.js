@@ -66,9 +66,16 @@ export default function StationInfo({ station, theme }) {
             {station.river}
           </Text>
         </View>
-        <Text style={[styles.updateTime, { color: theme.dark ? '#AAA' : '#666' }]}>
-          Aktualizacja: {station.updateTime}
-        </Text>
+        <View style={styles.updateContainer}>
+          <Text style={[styles.updateTime, { color: theme.dark ? '#AAA' : '#666' }]}>
+            Aktualizacja pomiaru: {station.fullUpdateTime || station.updateTime}
+          </Text>
+          {station.lastRefresh && (
+            <Text style={[styles.refreshTime, { color: theme.dark ? '#AAA' : '#666' }]}>
+              Ostatnie odświeżenie: {new Date(station.lastRefresh).toLocaleTimeString('pl-PL')}
+            </Text>
+          )}
+        </View>
       </View>
       
       <View style={styles.levelContainer}>
@@ -78,39 +85,42 @@ export default function StationInfo({ station, theme }) {
         <Text style={[styles.levelUnit, { color: theme.colors.text }]}>cm</Text>
       </View>
       
-      <View style={styles.trendContainer}>
-        <Ionicons 
-          name={
-            station.trend === 'up' 
-              ? 'arrow-up' 
-              : station.trend === 'down' 
-                ? 'arrow-down' 
-                : 'remove'
-          } 
-          size={18} 
-          color={
-            station.trend === 'up' 
-              ? theme.colors.danger 
-              : station.trend === 'down' 
-                ? theme.colors.safe 
-                : theme.colors.text
-          } 
-        />
-        <Text 
-          style={[
-            styles.trendText, 
-            { 
-              color: station.trend === 'up' 
-                ? theme.colors.danger 
-                : station.trend === 'down' 
-                  ? theme.colors.safe 
-                  : theme.colors.text
-            }
-          ]}
-        >
-          {station.trendValue} cm / 24h
-        </Text>
-      </View>
+     <View style={styles.trendContainer}>
+  <Ionicons 
+    name={
+      station.trend === 'up' 
+        ? 'arrow-up' 
+        : station.trend === 'down' 
+          ? 'arrow-down' 
+          : 'remove'
+    } 
+    size={18} 
+    color={
+      station.trend === 'up' 
+        ? theme.colors.danger 
+        : station.trend === 'down' 
+          ? theme.colors.safe 
+          : theme.colors.text
+    } 
+  />
+  <Text 
+    style={[
+      styles.trendText, 
+      { 
+        color: station.trend === 'up' 
+          ? theme.colors.danger 
+          : station.trend === 'down' 
+            ? theme.colors.safe 
+            : theme.colors.text
+      }
+    ]}
+  >
+    {station.trendValue > 0 ? '+' : ''}{station.trendValue} cm / 24h
+    {station.trend === 'stable' ? ' (stabilny)' : 
+     station.trend === 'up' ? ' (wzrost)' : 
+     ' (spadek)'}
+  </Text>
+</View>
       
       {getLevelIndicator()}
       
@@ -150,7 +160,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
   riverInfo: {
@@ -161,8 +171,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 6,
   },
+  updateContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+  },
   updateTime: {
     fontSize: 12,
+  },
+  refreshTime: {
+    fontSize: 11,
+    marginTop: 2,
   },
   levelContainer: {
     flexDirection: 'row',

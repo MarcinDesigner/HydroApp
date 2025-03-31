@@ -144,17 +144,15 @@ const RiverNetworkView = ({ stations, riverName }) => {
                     />
                     
                     {/* Nazwa stacji */}
-                    <SvgText
-                      x={stationX}
-                      y={stationY + 20}
-                      textAnchor="middle"
-                      fontSize={14}
-                      fontWeight="bold"
-                      fill={theme.colors.text}
-                    >
-                      {station.name}
-                    </SvgText>
-                    
+                   SvgText
+  x={stationX}
+  y={stationY + 40}
+  textAnchor="middle"
+  fontSize={10}
+  fill={theme.colors.text}
+>
+  {station.level} cm {station.trendValue > 0 ? '↑' : station.trendValue < 0 ? '↓' : '→'}
+</SvgText>                    
                     {/* Wskaźnik poziomu */}
                     <Rect
                       x={stationX - 80}

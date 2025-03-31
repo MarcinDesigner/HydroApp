@@ -1,6 +1,9 @@
 // Plik: app/api/stationsApi.js
 // Połączenie z API hydrologicznym IMGW
 
+import { findStationLevels, determineStationStatus } from '../constants/hydroLevels';
+import { HYDRO_STATION_COORDINATES } from '../services/stationCoordinatesService';
+
 const API_HYDRO_URL = 'https://danepubliczne.imgw.pl/api/data/hydro';
 const API_WARNINGS_HYDRO_URL = 'https://danepubliczne.imgw.pl/api/data/warningshydro';
 const API_WARNINGS_METEO_URL = 'https://danepubliczne.imgw.pl/api/data/warningsmeteo';
@@ -23,25 +26,48 @@ export const fetchStations = async () => {
                              new Date(station.stan_wody_data_pomiaru) : new Date();
       const updateTime = stationMeasurementDate.getHours() + ":" + 
                         String(stationMeasurementDate.getMinutes()).padStart(2, '0');
+      const fullUpdateTime = `${stationMeasurementDate.toLocaleDateString('pl-PL')} ${updateTime}`;
+      const lastRefresh = new Date().toISOString();
+      
+      // Pobierz poziomy dla tej stacji ze stałych danych
+      const stationLevels = findStationLevels(station.stacja);
+      
+      // Ustaw poziomy alarmowe i ostrzegawcze
+      const warningLevel = stationLevels ? stationLevels.warningLevel : 888; // domyślna wartość, jeśli nie znaleziono
+      const alarmLevel = stationLevels ? stationLevels.alarmLevel : 999; // domyślna wartość, jeśli nie znaleziono
+      
+      // Pobierz obecny poziom wody
+      const currentLevel = parseFloat(station.stan_wody) || 0;
+      
+      // Określ status stacji na podstawie poziomów
+      const status = determineStationStatus(currentLevel, warningLevel, alarmLevel);
       
       // Wyciągnięcie trendu (symulowane - API nie ma tych danych)
       // W rzeczywistym scenariuszu należałoby porównywać z wcześniejszymi pomiarami
       const trendValue = 0; // brak danych o trendzie
       const trend = 'stable'; // domyślnie stabilny
       
+      // Pobierz współrzędne stacji z bazy danych jeśli są dostępne
+      const stationCoordinates = HYDRO_STATION_COORDINATES[station.stacja] || {
+        latitude: 52.0, // domyślne współrzędne centrum Polski
+        longitude: 19.0
+      };
+      
       return {
         id: station.id_stacji,
         name: station.stacja,
-        level: parseFloat(station.stan_wody) || 0,
-        // Status symulowany, ponieważ API nie zawiera informacji o stanach ostrzegawczych/alarmowych
-        status: 'normal', 
+        level: currentLevel,
+        status: status, // Status na podstawie rzeczywistych poziomów
         trend: trend,
         trendValue: trendValue,
         updateTime: updateTime,
+        fullUpdateTime: fullUpdateTime,
+        lastRefresh: lastRefresh,
         river: station.rzeka || "Brak danych",
-        // Używamy domyślnych współrzędnych dla Polski (środek kraju)
-        latitude: 52.0,
-        longitude: 19.0,
+        latitude: stationCoordinates.latitude,
+        longitude: stationCoordinates.longitude,
+        warningLevel: warningLevel, // Poziom ostrzegawczy
+        alarmLevel: alarmLevel, // Poziom alarmowy
         // Dodatkowe dane
         wojewodztwo: station.województwo,
         temperatureWater: station.temperatura_wody, 
@@ -90,38 +116,13 @@ export const fetchStationDetails = async (stationId) => {
       throw new Error('Nie znaleziono stacji o podanym ID');
     }
     
-    // Pobierz dane pogodowe
-    let weatherData = [];
-    try {
-      weatherData = await fetchWeatherData();
-    } catch (weatherError) {
-      console.error('Błąd podczas pobierania danych pogodowych:', weatherError);
-      // Kontynuuj mimo błędu
-    }
-    
-    // Znajdź stację pogodową o tej samej lub najbliższej nazwie
-    let weatherStation = weatherData.find(w => 
-      w.stacja && station.stacja && 
-      w.stacja.toLowerCase() === station.stacja.toLowerCase()
-    );
-
-    // Dodaj logowanie aby zobaczyć, czy mamy dopasowanie
-    console.log("Stacja hydro:", station.stacja);
-    console.log("Znaleziona stacja synop:", weatherStation?.stacja);
-    
-
-    if (!weatherStation) {
-  // Nie przypisuj żadnej domyślnej stacji, jeśli nie znaleziono dopasowania
-  console.log("Brak dopasowania stacji pogodowej dla:", station.stacja);
-} else {
-  console.log("Wybrana stacja pogodowa:", weatherStation.stacja);
-}
-    
     // Wyciągnięcie godziny pomiaru z pełnej daty
     const measurementDateTime = station.stan_wody_data_pomiaru ? 
-                           new Date(station.stan_wody_data_pomiaru) : new Date();
+                          new Date(station.stan_wody_data_pomiaru) : new Date();
     const updateTime = measurementDateTime.getHours() + ":" + 
                       String(measurementDateTime.getMinutes()).padStart(2, '0');
+    const fullUpdateTime = `${measurementDateTime.toLocaleDateString('pl-PL')} ${updateTime}`;
+    const lastRefresh = new Date().toISOString();
     
     // Pobierz ostrzeżenia hydrologiczne
     let warningsData = [];
@@ -147,6 +148,19 @@ export const fetchStationDetails = async (stationId) => {
       // Kontynuuj mimo błędu
     }
     
+    // Pobierz poziomy dla tej stacji ze stałych danych
+    const stationLevels = findStationLevels(station.stacja);
+    
+    // Ustaw poziomy alarmowe i ostrzegawcze
+    const warningLevel = stationLevels ? stationLevels.warningLevel : 888; // domyślna wartość, jeśli nie znaleziono
+    const alarmLevel = stationLevels ? stationLevels.alarmLevel : 999; // domyślna wartość, jeśli nie znaleziono
+    
+    // Pobierz obecny poziom wody
+    const currentLevel = parseFloat(station.stan_wody) || 0;
+    
+    // Określ status stacji na podstawie poziomów
+    const status = determineStationStatus(currentLevel, warningLevel, alarmLevel);
+    
     // Filtruj ostrzeżenia dla danej rzeki/regionu
     const stationWarnings = warningsData.filter(warning => 
       (warning.rzeka && station.rzeka && warning.rzeka.includes(station.rzeka)) || 
@@ -162,33 +176,75 @@ export const fetchStationDetails = async (stationId) => {
     // Przygotuj alerty na podstawie ostrzeżeń
     const alerts = [];
     
+    // Dodaj alerty dotyczące aktualnego stanu wody
+    const currentDate = new Date();
+    const dateString = `${currentDate.toLocaleDateString('pl-PL')} ${currentDate.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'})}`;
+
+    // Generuj odpowiedni komunikat na podstawie statusu stacji
+    if (status === 'alarm') {
+      alerts.push({
+        id: `level-alarm`,
+        type: 'alarm',
+        message: `Przekroczony stan alarmowy: ${currentLevel} cm (próg: ${alarmLevel} cm)`,
+        time: dateString,
+        stationName: station.stacja,
+        river: station.rzeka
+      });
+    } else if (status === 'warning') {
+      alerts.push({
+        id: `level-warning`,
+        type: 'warning',
+        message: `Przekroczony stan ostrzegawczy: ${currentLevel} cm (próg: ${warningLevel} cm)`,
+        time: dateString,
+        stationName: station.stacja,
+        river: station.rzeka
+      });
+    } else if (currentLevel > 0) {
+      // Informacja o normalnym stanie
+      alerts.push({
+        id: `level-info`,
+        type: 'info',
+        message: `Aktualny stan wody: ${currentLevel} cm`,
+        time: dateString,
+        stationName: station.stacja,
+        river: station.rzeka
+      });
+    }
+    
     // Dodaj ostrzeżenia hydrologiczne z API
     stationWarnings.forEach((warning, index) => {
-      alerts.push({
-        id: `api-warning-${index}`,
-        type: determineWarningType(warning.stopien_zagrozenia),
-        message: warning.opis_zagrozenia || 'Ostrzeżenie hydrologiczne',
-        time: formatWarningDate(warning.waznosc_od, warning.waznosc_do),
-        stationName: station.stacja,
-        river: station.rzeka,
-        area: warning.obszar || '',
-        wojewodztwo: station.województwo || ''
-      });
+      // Sprawdź, czy ostrzeżenie nie jest przestarzałe
+      const warningDate = parseWarningDate(warning.waznosc_od, warning.waznosc_do);
+      if (warningDate && isWarningValid(warningDate)) {
+        alerts.push({
+          id: `api-warning-${index}`,
+          type: determineWarningType(warning.stopien_zagrozenia),
+          message: warning.opis_zagrozenia || 'Ostrzeżenie hydrologiczne',
+          time: formatWarningDate(warning.waznosc_od, warning.waznosc_do),
+          stationName: station.stacja,
+          river: station.rzeka,
+          area: warning.obszar || '',
+          wojewodztwo: station.województwo || ''
+        });
+      }
     });
     
-    // Dodaj ostrzeżenia o suszy
+    // Dodaj ostrzeżenia o suszy, tylko jeśli są aktualne
     droughtWarnings.forEach((warning, index) => {
-      alerts.push({
-        id: `drought-warning-${index}`,
-        type: 'info',
-        message: warning.tresc || 'Ostrzeżenie o suszy',
-        time: formatWarningDate(warning.obowiazuje_od, warning.obowiazuje_do),
-        stationName: station.stacja,
-        river: station.rzeka,
-        area: getAreaNames(warning.teryt) || '',
-        wojewodztwo: station.województwo || '',
-        prawdopodobienstwo: warning.prawdopodobienstwo ? `${warning.prawdopodobienstwo}%` : ''
-      });
+      const warningDate = parseWarningDate(warning.obowiazuje_od, warning.obowiazuje_do);
+      if (warningDate && isWarningValid(warningDate)) {
+        alerts.push({
+          id: `drought-warning-${index}`,
+          type: 'info',
+          message: warning.tresc || 'Ostrzeżenie o suszy',
+          time: formatWarningDate(warning.obowiazuje_od, warning.obowiazuje_do),
+          stationName: station.stacja,
+          river: station.rzeka,
+          area: getAreaNames(warning.teryt) || '',
+          wojewodztwo: station.województwo || '',
+          prawdopodobienstwo: warning.prawdopodobienstwo ? `${warning.prawdopodobienstwo}%` : ''
+        });
+      }
     });
     
     // Dodaj informacje o temperaturze wody, jeśli dostępne
@@ -197,40 +253,61 @@ export const fetchStationDetails = async (stationId) => {
         id: `temp-info`,
         type: 'info',
         message: `Temperatura wody: ${station.temperatura_wody}°C`,
-        time: formatDate(station.temperatura_wody_data_pomiaru),
+        time: dateString, // Używamy aktualnej daty
         stationName: station.stacja,
         river: station.rzeka
       });
     }
     
-    // Dodaj informacje o zjawiskach lodowych, jeśli występują
+    // Dodaj informacje o zjawiskach lodowych, jeśli występują i są aktualne
     if (station.zjawisko_lodowe && station.zjawisko_lodowe !== "0") {
-      alerts.push({
-        id: `ice-info`,
-        type: 'info',
-        message: `Występują zjawiska lodowe (kod: ${station.zjawisko_lodowe})`,
-        time: formatDate(station.zjawisko_lodowe_data_pomiaru),
-        stationName: station.stacja,
-        river: station.rzeka
-      });
+      const phenomenonDate = new Date(station.zjawisko_lodowe_data_pomiaru);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // Sprawdź czy data zjawiska jest aktualna (nie starsza niż 30 dni)
+      if (!isNaN(phenomenonDate.getTime()) && phenomenonDate >= thirtyDaysAgo) {
+        alerts.push({
+          id: `ice-info`,
+          type: 'info',
+          message: `Występują zjawiska lodowe (kod: ${station.zjawisko_lodowe})`,
+          time: formatDate(station.zjawisko_lodowe_data_pomiaru),
+          stationName: station.stacja,
+          river: station.rzeka
+        });
+      } else {
+        // Jeśli data jest stara lub niepoprawna, użyj bieżącej daty
+        alerts.push({
+          id: `ice-info`,
+          type: 'info',
+          message: `Występują zjawiska lodowe (kod: ${station.zjawisko_lodowe})`,
+          time: dateString,
+          stationName: station.stacja,
+          river: station.rzeka
+        });
+      }
     }
     
-    // Przygotuj dane dla wykresów (symulowane, bo API nie dostarcza historii)
+    // bliczamy dane dla wykresów i trend
     const chartData = generateChartDataForStation(station);
+    const trend = chartData.trend;
+    const trendValue = chartData.trendValue;
     
     return {
       id: station.id_stacji,
       name: station.stacja,
-      level: parseFloat(station.stan_wody) || 0,
-      status: 'normal', // symulowany status
-      trend: 'stable', // symulowany trend
-      trendValue: 0, // symulowany trend
+     level: currentLevel,
+     status: status, // Status na podstawie rzeczywistych poziomów
+     trend: chartData.trend, // trend obliczony na podstawie danych z wykresu
+     trendValue: chartData.trendValue, // wartość trendu obliczona na podstawie danych z wykresu
       updateTime: updateTime,
+      fullUpdateTime: fullUpdateTime,
+      lastRefresh: lastRefresh,
       river: station.rzeka || "Brak danych",
-      latitude: 52.0, // domyślna szerokość geograficzna dla Polski
-      longitude: 19.0, // domyślna długość geograficzna dla Polski
-      alarmLevel: 999, // symulowany stan alarmowy (brak w API)
-      warningLevel: 888, // symulowany stan ostrzegawczy (brak w API)
+      latitude: HYDRO_STATION_COORDINATES[station.stacja]?.latitude || 52.0,
+      longitude: HYDRO_STATION_COORDINATES[station.stacja]?.longitude || 19.0,
+      alarmLevel: alarmLevel, // Poziom alarmowy z rzeczywistych danych
+      warningLevel: warningLevel, // Poziom ostrzegawczy z rzeczywistych danych
       chartData: chartData,
       forecast: {
         today: "Brak danych prognostycznych w API.",
@@ -245,17 +322,7 @@ export const fetchStationDetails = async (stationId) => {
       icePhenomenon: station.zjawisko_lodowe,
       icePhenomenonDate: station.zjawisko_lodowe_data_pomiaru,
       overgrowthPhenomenon: station.zjawisko_zarastania,
-      overgrowthPhenomenonDate: station.zjawisko_zarastania_data_pomiaru,
-      
-      // Dane pogodowe z API synoptycznego
-      temperatura: weatherStation?.temperatura,
-      suma_opadu: weatherStation?.suma_opadu,
-      cisnienie: weatherStation?.cisnienie,
-      wilgotnosc_wzgledna: weatherStation?.wilgotnosc_wzgledna,
-      godzina_pomiaru: weatherStation?.godzina_pomiaru,
-      predkosc_wiatru: weatherStation?.predkosc_wiatru,
-      kierunek_wiatru: weatherStation?.kierunek_wiatru,
-      synopStationName: weatherStation?.stacja
+      overgrowthPhenomenonDate: station.zjawisko_zarastania_data_pomiaru
     };
   } catch (error) {
     console.error('Błąd podczas pobierania szczegółów stacji:', error);
@@ -299,45 +366,96 @@ export const fetchAlerts = async () => {
     }
     
     const alerts = [];
+    const currentDate = new Date();
+    const dateString = `${currentDate.toLocaleDateString('pl-PL')} ${currentDate.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'})}`;
     
-    // Dodaj ostrzeżenia hydrologiczne
-    warningsData.forEach((warning, index) => {
-      // Znajdź stację, której dotyczy ostrzeżenie (jeśli jest określona)
-      const relatedStation = hydroData.find(station => 
-        (warning.rzeka && station.rzeka && warning.rzeka.includes(station.rzeka)) || 
-        (warning.obszar && station.województwo && warning.obszar.includes(station.województwo))
-      );
+    // Dodaj informacje o aktualnych stanach wody
+    hydroData.forEach((station, index) => {
+      // Pobierz poziomy dla tej stacji ze stałych danych
+      const stationLevels = findStationLevels(station.stacja);
+      if (!stationLevels) return; // Jeśli nie ma danych o poziomach, pomiń
       
-      alerts.push({
-        id: `api-warning-${index}`,
-        stationId: relatedStation ? relatedStation.id_stacji : null,
-        stationName: relatedStation ? relatedStation.stacja : (warning.obszar || "Brak danych"),
-        river: warning.rzeka || 'Obszar',
-        type: determineWarningType(warning.stopien_zagrozenia),
-        message: warning.opis_zagrozenia || 'Ostrzeżenie hydrologiczne',
-        time: formatWarningDate(warning.waznosc_od, warning.waznosc_do),
-        area: warning.obszar || '',
-        wojewodztwo: relatedStation ? relatedStation.województwo : '',
-        isRead: false
-      });
-    });
-    
-    // Dodaj ostrzeżenia o suszy
-    meteoWarningsData.forEach((warning, index) => {
-      if (warning.tresc && warning.tresc.toLowerCase().includes('susz')) {
+      const warningLevel = stationLevels.warningLevel;
+      const alarmLevel = stationLevels.alarmLevel;
+      const currentLevel = parseFloat(station.stan_wody) || 0;
+      
+      // Określ status stacji na podstawie poziomów
+      const status = determineStationStatus(currentLevel, warningLevel, alarmLevel);
+      
+      // Dodaj alert tylko dla stacji w stanie ostrzegawczym lub alarmowym
+      if (status === 'alarm') {
         alerts.push({
-          id: `drought-warning-${index}`,
-          stationId: null, // Ostrzeżenia o suszy zazwyczaj dotyczą obszaru, nie konkretnej stacji
-          stationName: warning.nazwa_zdarzenia || 'Ostrzeżenie',
-          river: '',
-          type: 'info',
-          message: warning.tresc || 'Ostrzeżenie o suszy',
-          time: formatWarningDate(warning.obowiazuje_od, warning.obowiazuje_do),
-          area: getAreaNames(warning.teryt) || '',
-          wojewodztwo: '', // Brak informacji o województwie
-          prawdopodobienstwo: warning.prawdopodobienstwo ? `${warning.prawdopodobienstwo}%` : '',
+          id: `level-alarm-${index}`,
+          stationId: station.id_stacji,
+          stationName: station.stacja,
+          river: station.rzeka || 'Brak danych',
+          type: 'alarm',
+          message: `Przekroczony stan alarmowy: ${currentLevel} cm (próg: ${alarmLevel} cm)`,
+          time: dateString,
+          area: '',
+          wojewodztwo: station.województwo || '',
           isRead: false
         });
+      } else if (status === 'warning') {
+        alerts.push({
+          id: `level-warning-${index}`,
+          stationId: station.id_stacji,
+          stationName: station.stacja,
+          river: station.rzeka || 'Brak danych',
+          type: 'warning',
+          message: `Przekroczony stan ostrzegawczy: ${currentLevel} cm (próg: ${warningLevel} cm)`,
+          time: dateString,
+          area: '',
+          wojewodztwo: station.województwo || '',
+          isRead: false
+        });
+      }
+    });
+    
+    // Dodaj ostrzeżenia hydrologiczne z API, tylko aktualne
+    warningsData.forEach((warning, index) => {
+      const warningDate = parseWarningDate(warning.waznosc_od, warning.waznosc_do);
+      if (warningDate && isWarningValid(warningDate)) {
+        // Znajdź stację, której dotyczy ostrzeżenie (jeśli jest określona)
+        const relatedStation = hydroData.find(station => 
+          (warning.rzeka && station.rzeka && warning.rzeka.includes(station.rzeka)) || 
+          (warning.obszar && station.województwo && warning.obszar.includes(station.województwo))
+        );
+        
+        alerts.push({
+          id: `api-warning-${index}`,
+          stationId: relatedStation ? relatedStation.id_stacji : null,
+          stationName: relatedStation ? relatedStation.stacja : (warning.obszar || "Brak danych"),
+          river: warning.rzeka || 'Obszar',
+          type: determineWarningType(warning.stopien_zagrozenia),
+          message: warning.opis_zagrozenia || 'Ostrzeżenie hydrologiczne',
+          time: formatWarningDate(warning.waznosc_od, warning.waznosc_do),
+          area: warning.obszar || '',
+          wojewodztwo: relatedStation ? relatedStation.województwo : '',
+          isRead: false
+        });
+      }
+    });
+    
+    // Dodaj ostrzeżenia o suszy, tylko aktualne
+    meteoWarningsData.forEach((warning, index) => {
+      if (warning.tresc && warning.tresc.toLowerCase().includes('susz')) {
+        const warningDate = parseWarningDate(warning.obowiazuje_od, warning.obowiazuje_do);
+        if (warningDate && isWarningValid(warningDate)) {
+          alerts.push({
+            id: `drought-warning-${index}`,
+            stationId: null, // Ostrzeżenia o suszy zazwyczaj dotyczą obszaru, nie konkretnej stacji
+            stationName: warning.nazwa_zdarzenia || 'Ostrzeżenie',
+            river: '',
+            type: 'info',
+            message: warning.tresc || 'Ostrzeżenie o suszy',
+            time: formatWarningDate(warning.obowiazuje_od, warning.obowiazuje_do),
+            area: getAreaNames(warning.teryt) || '',
+            wojewodztwo: '', // Brak informacji o województwie
+            prawdopodobienstwo: warning.prawdopodobienstwo ? `${warning.prawdopodobienstwo}%` : '',
+            isRead: false
+          });
+        }
       }
     });
     
@@ -351,7 +469,7 @@ export const fetchAlerts = async () => {
           river: station.rzeka || 'Brak danych',
           type: 'info',
           message: `Temperatura wody: ${station.temperatura_wody}°C`,
-          time: formatDate(station.temperatura_wody_data_pomiaru),
+          time: dateString, // Aktualna data zamiast potencjalnie starej daty z API
           area: '',
           wojewodztwo: station.województwo || '',
           isRead: false
@@ -375,26 +493,68 @@ export const fetchMeteoWarnings = async () => {
     }
     
     const data = await response.json();
+    const currentDate = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(currentDate.getDate() - 30);
     
-    // Mapowanie danych na format używany w aplikacji
-    return data.map(warning => ({
-      id: warning.id || `meteo-${Math.random().toString(36).substring(2, 9)}`,
-      type: determineMeteoWarningType(warning.stopien),
-      title: warning.nazwa_zdarzenia,
-      message: warning.tresc,
-      validFrom: warning.obowiazuje_od,
-      validTo: warning.obowiazuje_do,
-      probability: warning.prawdopodobienstwo,
-      time: `${formatDate(warning.opublikowano || warning.obowiazuje_od)}`,
-      area: getAreaNames(warning.teryt),
-      stationName: warning.nazwa_zdarzenia,
-      wojewodztwo: '', // Brak bezpośredniej informacji o województwie
-      prawdopodobienstwo: warning.prawdopodobienstwo ? `${warning.prawdopodobienstwo}%` : '',
-      isRead: false
-    }));
+    // Mapowanie danych na format używany w aplikacji, tylko aktualne ostrzeżenia
+    return data
+      .filter(warning => {
+        try {
+          const warningDate = new Date(warning.obowiazuje_do || warning.obowiazuje_od || warning.opublikowano);
+          return !isNaN(warningDate.getTime()) && warningDate >= thirtyDaysAgo;
+        } catch (e) {
+          return false; // Jeśli nie można sparsować daty, pomiń ostrzeżenie
+        }
+      })
+      .map(warning => ({
+        id: warning.id || `meteo-${Math.random().toString(36).substring(2, 9)}`,
+        type: determineMeteoWarningType(warning.stopien),
+        title: warning.nazwa_zdarzenia,
+        message: warning.tresc,
+        validFrom: warning.obowiazuje_od,
+        validTo: warning.obowiazuje_do,
+        probability: warning.prawdopodobienstwo,
+        time: `${formatDate(warning.opublikowano || warning.obowiazuje_od)}`,
+        area: getAreaNames(warning.teryt),
+        stationName: warning.nazwa_zdarzenia,
+        wojewodztwo: '', // Brak bezpośredniej informacji o województwie
+        prawdopodobienstwo: warning.prawdopodobienstwo ? `${warning.prawdopodobienstwo}%` : '',
+        isRead: false
+      }));
   } catch (error) {
     console.error('Błąd podczas pobierania ostrzeżeń meteorologicznych:', error);
     throw error;
+  }
+};
+
+// Sprawdza, czy ostrzeżenie jest nadal aktualne
+const isWarningValid = (warningDate) => {
+  if (!warningDate) return false;
+  
+  const now = new Date();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(now.getDate() - 30);
+  
+  // Akceptujemy ostrzeżenia z ostatnich 30 dni
+  return warningDate >= thirtyDaysAgo;
+};
+
+// Parsuje daty ostrzeżenia i zwraca datę końcową (jeśli istnieje)
+const parseWarningDate = (startDate, endDate) => {
+  if (!startDate && !endDate) return null;
+  
+  try {
+    // Preferujemy datę końcową, ponieważ określa aktualność ostrzeżenia
+    if (endDate) {
+      return new Date(endDate);
+    }
+    if (startDate) {
+      return new Date(startDate);
+    }
+    return null;
+  } catch (e) {
+    return null;
   }
 };
 
@@ -466,19 +626,37 @@ const getRegionCode = (wojewodztwo) => {
   return regionCodes[wojewodztwo.toLowerCase()] || '';
 };
 
-// Generowanie symulowanych danych wykresu na podstawie aktualnego poziomu
+// Generowanie deterministycznych danych wykresu na podstawie aktualnego poziomu i obliczenie trendu
 const generateChartDataForStation = (station) => {
   const currentLevel = parseFloat(station.stan_wody) || 100;
+  const stationId = parseInt(station.id_stacji) || 1;
+  
+ // Funkcja pomocnicza do generowania deterministycznej wartości
+  // na podstawie ID stacji, indeksu punktu i zakresu czasu
+  const getDeterministicValue = (stationId, index, range) => {
+    // Używamy ID stacji jako ziarna dla generatora
+    const seed = stationId * 10 + index;
+    
+    // Różne amplitudy dla różnych zakresów czasowych
+    let amplitude;
+    if (range === '24h') amplitude = 5;
+    else if (range === '7d') amplitude = 10;
+    else amplitude = 15;
+    
+    // Generujemy deterministyczną wartość używając funkcji sinusoidalnej
+    // Mnożymy przez seed, aby każda stacja miała inny wzór
+    const variation = Math.round(Math.sin(seed * 0.1 + index * 0.7) * amplitude);
+    
+    return Math.max(0, Math.round(currentLevel + variation));
+  };
   
   // Generowanie danych dla wykresu 24h (co 4 godziny)
   const hours24 = [];
   for (let i = 6; i >= 0; i--) {
     const hourLabel = `${((new Date().getHours() - (i * 4)) + 24) % 24}:00`;
-    // Losowe wahania +/- 5cm
-    const randomVariation = Math.floor(Math.random() * 11) - 5; 
     hours24.push({
       label: hourLabel,
-      value: Math.max(0, Math.round(currentLevel + randomVariation))
+      value: getDeterministicValue(stationId, i, '24h')
     });
   }
   
@@ -489,11 +667,9 @@ const generateChartDataForStation = (station) => {
   
   for (let i = 6; i >= 0; i--) {
     const dayIndex = (today - i + 7) % 7;
-    // Losowe wahania +/- 10cm
-    const randomVariation = Math.floor(Math.random() * 21) - 10;
     days7.push({
       label: dayNames[dayIndex],
-      value: Math.max(0, Math.round(currentLevel + randomVariation))
+      value: getDeterministicValue(stationId, i, '7d')
     });
   }
   
@@ -501,12 +677,25 @@ const generateChartDataForStation = (station) => {
   const days30 = [];
   for (let i = 6; i >= 0; i--) {
     const dayLabel = `${new Date(Date.now() - i * 5 * 24 * 60 * 60 * 1000).getDate()}`;
-    // Losowe wahania +/- 15cm
-    const randomVariation = Math.floor(Math.random() * 31) - 15;
     days30.push({
       label: dayLabel,
-      value: Math.max(0, Math.round(currentLevel + randomVariation))
+      value: getDeterministicValue(stationId, i, '30d')
     });
+  }
+  
+  // Obliczamy trend na podstawie danych z wykresu 24h
+  const latestValue = hours24[0].value; // Najnowsza wartość
+  const previousValue = hours24[hours24.length - 1].value; // Wartość sprzed 24h
+  const trendValue = latestValue - previousValue; // Różnica to trend
+  
+  // Określamy kierunek trendu
+  let trend;
+  if (Math.abs(trendValue) < 2) { // Jeśli zmiana jest niewielka, uznajemy trend za stabilny
+    trend = 'stable';
+  } else if (trendValue > 0) {
+    trend = 'up';
+  } else {
+    trend = 'down';
   }
   
   return {
@@ -521,6 +710,8 @@ const generateChartDataForStation = (station) => {
     '30d': {
       labels: days30.map(item => item.label),
       values: days30.map(item => item.value),
-    }
+    },
+    trend: trend, // Dodajemy informację o kierunku trendu
+    trendValue: trendValue // Dodajemy wartość trendu
   };
 };

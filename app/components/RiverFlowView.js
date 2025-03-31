@@ -149,27 +149,30 @@ const RiverFlowView = ({ stations, riverName }) => {
                 
                 <View style={styles.detailsRow}>
                   <View style={styles.trendContainer}>
-                    <Ionicons 
-                      name={
-                        station.trend === 'up' ? 'arrow-up' : 
-                        station.trend === 'down' ? 'arrow-down' : 'remove'
-                      } 
-                      size={16} 
-                      color={
-                        station.trend === 'up' ? theme.colors.danger : 
-                        station.trend === 'down' ? '#4CAF50' : theme.dark ? '#aaa' : '#777'
-                      } 
-                    />
-                    <Text style={[
-                      styles.trendText, 
-                      { 
-                        color: station.trend === 'up' ? theme.colors.danger : 
-                              station.trend === 'down' ? '#4CAF50' : theme.dark ? '#aaa' : '#777'
-                      }
-                    ]}>
-                      {station.trendValue || 0} cm
-                    </Text>
-                  </View>
+                  <Ionicons 
+                    name={
+                      station.trend === 'up' ? 'arrow-up' : 
+                      station.trend === 'down' ? 'arrow-down' : 'remove'
+                    } 
+                    size={16} 
+                    color={
+                      station.trend === 'up' ? theme.colors.danger : 
+                      station.trend === 'down' ? '#4CAF50' : theme.dark ? '#aaa' : '#777'
+                    } 
+                  />
+                  <Text style={[
+                    styles.trendText, 
+                    { 
+                      color: station.trend === 'up' ? theme.colors.danger : 
+                            station.trend === 'down' ? '#4CAF50' : theme.dark ? '#aaa' : '#777'
+                    }
+                  ]}>
+                    {station.trendValue > 0 ? '+' : ''}{station.trendValue} cm
+                    {station.trend === 'stable' ? ' (stabilny)' : 
+                     station.trend === 'up' ? ' (wzrost)' : 
+                     ' (spadek)'}
+                  </Text>
+                </View>
                   
                   <Ionicons 
                     name="chevron-forward" 
