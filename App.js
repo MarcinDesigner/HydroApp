@@ -1,4 +1,4 @@
-// Plik: App.js
+// Plik: App.js - dodanie nowego ekranu Rzeki
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -21,6 +21,7 @@ import SettingsScreen from './app/screens/SettingsScreen';
 import FavoritesScreen from './app/screens/FavoritesScreen';
 import AlertsScreen from './app/screens/AlertsScreen';
 import RiverFlowScreen from './app/screens/RiverFlowScreen';
+import RiversScreen from './app/screens/RiversScreen'; // Nowy ekran Rzeki
 import WidgetScreen from './app/screens/WidgetScreen';
 
 // Jeśli używasz danych hydrologicznych z pliku constants
@@ -45,6 +46,8 @@ function MainTabs() {
             iconName = focused ? 'heart' : 'heart-outline';
           } else if (route.name === 'Alerts') {
             iconName = focused ? 'warning' : 'warning-outline';
+          } else if (route.name === 'Rivers') {
+            iconName = focused ? 'git-network' : 'git-network-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -69,6 +72,11 @@ function MainTabs() {
         name="Map" 
         component={MapScreen} 
         options={{ title: 'Mapa' }} 
+      />
+      <Tab.Screen 
+        name="Rivers" 
+        component={RiversScreen} 
+        options={{ title: 'Rzeki' }} 
       />
       <Tab.Screen 
         name="Favorites" 

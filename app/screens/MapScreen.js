@@ -240,7 +240,7 @@ export default function MapScreen() {
         rotateEnabled={true}
         zoomEnabled={true}
         minZoomLevel={4}
-        maxZoomLevel={19}
+        maxZoomLevel={10}
         attributionEnabled={true}  // Atrybucja OSM (wymagana prawnie)
       >
         {/* Dostawca kafelków OSM */}

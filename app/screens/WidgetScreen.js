@@ -25,7 +25,11 @@ const WidgetScreen = () => {
   }, [navigation]);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={true}
+    >
       <Text style={[styles.title, { color: theme.colors.text }]}>
         Zarządzanie widgetem
       </Text>
@@ -34,7 +38,7 @@ const WidgetScreen = () => {
         Dodaj widget stacji hydrologicznej do ekranu głównego, aby monitorować stan wody w wybranej stacji.
       </Text>
       
-      {/* StationWidget jest teraz w View, a nie w ScrollView */}
+      {/* StationWidget jest teraz bezpośrednio w ScrollView */}
       <StationWidget />
       
       <View style={styles.helpContainer}>
@@ -63,17 +67,17 @@ const WidgetScreen = () => {
           </Text>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 40, // Dodatkowy padding na dole, aby zapewnić miejsce do przewijania
   },
   title: {
     fontSize: 24,
@@ -87,6 +91,7 @@ const styles = StyleSheet.create({
   },
   helpContainer: {
     marginTop: 24,
+    marginBottom: 20,
   },
   helpTitle: {
     fontSize: 18,

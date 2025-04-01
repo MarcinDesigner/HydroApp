@@ -9,7 +9,8 @@ import {
   Switch, 
   Platform, 
   TextInput, 
-  ActivityIndicator 
+  ActivityIndicator, 
+  ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -17,6 +18,7 @@ import { useFavorites } from '../context/FavoritesContext';
 import { fetchStations, fetchStationDetails } from '../api/stationsApi';
 import widgetService from '../services/widgetService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 /**
  * Komponent zarządzający widgetem stacji
@@ -445,18 +447,19 @@ const StationWidget = () => {
       return null;
     }
     
+    
     // Użyjemy zwykłego View z map zamiast FlatList, aby uniknąć zagnieżdżania list
     return (
-      <View style={styles.searchResultsList}>
-        {searchResults.map(item => (
-          <TouchableOpacity
-            key={item.id.toString()}
-            style={[
-              styles.searchResultItem,
-              { backgroundColor: theme.colors.card, borderColor: theme.colors.border }
-            ]}
-            onPress={() => handleStationChange(item.id)}
-          >
+      <ScrollView style={styles.searchResultsList} nestedScrollEnabled={true}>
+      {searchResults.map(item => (
+         <TouchableOpacity
+          key={item.id.toString()}
+          style={[
+            styles.searchResultItem,
+            { backgroundColor: theme.colors.card, borderColor: theme.colors.border }
+          ]}
+          onPress={() => handleStationChange(item.id)}
+        >
             <View style={styles.searchResultContent}>
               <Text style={[styles.searchResultName, { color: theme.colors.text }]}>
                 {item.name}
@@ -493,10 +496,10 @@ const StationWidget = () => {
               )}
             </View>
           </TouchableOpacity>
-        ))}
-      </View>
-    );
-  };
+      ))}
+    </ScrollView>
+  );
+};
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.card }]}>
@@ -810,9 +813,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   searchResultsList: {
-    maxHeight: 200,
+    maxHeight: 200,  
     marginBottom: 16,
-    overflow: 'scroll',
   },
   searchResultItem: {
     flexDirection: 'row',
