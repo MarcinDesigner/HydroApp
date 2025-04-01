@@ -13,7 +13,7 @@
  * }
  */
 export const HYDRO_LEVELS = [
-  // Przykładowe dane - zostaną zastąpione rzeczywistymi danymi
+
   { stationName: "Warszawa", warningLevel: 600, alarmLevel: 650 },
   { stationName: "Kraków", warningLevel: 500, alarmLevel: 550 },
   { stationName: "Płock", warningLevel: 700, alarmLevel: 800 },

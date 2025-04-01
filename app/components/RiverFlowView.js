@@ -151,8 +151,8 @@ const RiverFlowView = ({ stations, riverName }) => {
                   <View style={styles.trendContainer}>
                   <Ionicons 
                     name={
-                      station.trend === 'up' ? 'arrow-up' : 
-                      station.trend === 'down' ? 'arrow-down' : 'remove'
+                    station.trend === 'up' ? 'arrow-up' : 
+                    station.trend === 'down' ? 'arrow-down' : 'remove'
                     } 
                     size={16} 
                     color={

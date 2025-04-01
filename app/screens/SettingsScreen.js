@@ -9,12 +9,14 @@ import {
   ScrollView,
   Alert
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useRefresh } from '../context/RefreshContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
+  const navigation = useNavigation();
   const { theme, isDarkMode, toggleTheme, setSystemTheme } = useTheme();
   const { refreshInterval, changeRefreshInterval, refreshIntervals } = useRefresh();
   const [notifications, setNotifications] = useState(true);
@@ -311,6 +313,16 @@ export default function SettingsScreen() {
       </SettingSection>
       
       <SettingSection title="APLIKACJA">
+        <TouchableOpacity 
+          style={styles.buttonItem}
+          onPress={() => navigation.navigate('Widget')}
+        >
+          <Ionicons name="apps" size={24} color={theme.colors.primary} style={styles.settingIcon} />
+          <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
+            Widgety stacji
+          </Text>
+        </TouchableOpacity>
+        
         <TouchableOpacity 
           style={styles.buttonItem}
           onPress={handleClearData}

@@ -21,9 +21,11 @@ import SettingsScreen from './app/screens/SettingsScreen';
 import FavoritesScreen from './app/screens/FavoritesScreen';
 import AlertsScreen from './app/screens/AlertsScreen';
 import RiverFlowScreen from './app/screens/RiverFlowScreen';
+import WidgetScreen from './app/screens/WidgetScreen';
 
 // Jeśli używasz danych hydrologicznych z pliku constants
 import { findStationLevels } from './app/constants/hydroLevels';
+import { useWidgetListener } from './app/services/widgetListener';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -83,11 +85,16 @@ function MainTabs() {
 }
 
 export default function App() {
-  // Inicjalizacja danych hydrologicznych
+ 
   useEffect(() => {
     console.log('Inicjalizacja aplikacji...');
     // Możesz tutaj dodać kod inicjalizacji danych, jeśli jest potrzebny
   }, []);
+  
+  // Nasłuchiwanie zdarzeń związanych z widgetami
+  useWidgetListener(null, (stationData) => {
+    console.log('Widget został odświeżony:', stationData?.name);
+  });
 
   return (
     <ThemeProvider>
@@ -132,6 +139,11 @@ export default function App() {
                   name="RiverFlow" 
                   component={RiverFlowScreen} 
                   options={{ title: 'Przepływ rzek' }} 
+                />
+                <Stack.Screen 
+                  name="Widget" 
+                  component={WidgetScreen} 
+                  options={{ title: 'Widget' }} 
                 />
               </Stack.Navigator>
             </NavigationContainer>

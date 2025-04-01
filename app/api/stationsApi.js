@@ -42,10 +42,10 @@ export const fetchStations = async () => {
       // Określ status stacji na podstawie poziomów
       const status = determineStationStatus(currentLevel, warningLevel, alarmLevel);
       
-      // Wyciągnięcie trendu (symulowane - API nie ma tych danych)
-      // W rzeczywistym scenariuszu należałoby porównywać z wcześniejszymi pomiarami
-      const trendValue = 0; // brak danych o trendzie
-      const trend = 'stable'; // domyślnie stabilny
+      // Obliczamy dane dla wykresów i trend
+      const chartData = generateChartDataForStation(station);
+      const trend = chartData.trend;
+      const trendValue = chartData.trendValue;
       
       // Pobierz współrzędne stacji z bazy danych jeśli są dostępne
       const stationCoordinates = HYDRO_STATION_COORDINATES[station.stacja] || {

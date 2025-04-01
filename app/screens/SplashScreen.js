@@ -37,7 +37,7 @@ export default function SplashScreen() {
         <View style={styles.overlay}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>HydroApp</Text>
-            <Text style={styles.slogan}>Aplikacja Powodziowa</Text>
+            <Text style={styles.slogan}>Aplikacja Przeciwpowodziowa</Text>
           </View>
           
           <TouchableOpacity 
@@ -56,7 +56,7 @@ export default function SplashScreen() {
               Bądź na bieżąco z ostrzeżeniami powodziowymi
             </Text>
             <Text style={styles.infoText}>
-              Dane dostarczane przez IMGW-PIB
+              Dane dostarczane przez IMGW-PIB hydro.imgw.pl
             </Text>
           </View>
         </View>
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'space-between',
     padding: 24,
-    paddingTop: 48,
+    paddingTop: 58,
     paddingBottom: 48,
   },
   titleContainer: {
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: 'bold',
     color: 'white',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowColor: 'rgba(0, 0, 0, 0.35)',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 5,
     marginBottom: 16,
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   slogan: {
     fontSize: 24,
     color: 'white',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowColor: 'rgba(0, 0, 0, 0.35)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
     textAlign: 'center',
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 30,
-    marginHorizontal: 50,
+    marginHorizontal: 20,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
