@@ -19,26 +19,127 @@ export const determineStationStatus = (currentLevel, warningLevel, alarmLevel, l
 /**
  * Dane poziomów hydrologicznych dla poszczególnych stacji.
  * Zawiera informacje o stanach alarmowych i ostrzegawczych.
- * 
+ * Usunięto zduplikowane wpisy.
+ *
  * Struktura:
  * {
  *   stationName: string - nazwa stacji
  *   warningLevel: number - stan ostrzegawczy w cm
  *   alarmLevel: number - stan alarmowy w cm
+ *   voivodeship: string - województwo
+ *   riverId: string - znormalizowana nazwa rzeki (ID)
  * }
  */
 export const HYDRO_LEVELS = [
-
+  // --- zachodniopomorskie ---
   { stationName: "Stare Drawsko", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "drawa" },
   { stationName: "Bardy", warningLevel: 360, alarmLevel: 400, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
   { stationName: "Białogard", warningLevel: 270, alarmLevel: 290, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
   { stationName: "Białogórzyno", warningLevel: 190, alarmLevel: 210, voivodeship: "zachodniopomorskie", riverId: "radew" },
   { stationName: "Bielinek", warningLevel: 480, alarmLevel: 550, voivodeship: "zachodniopomorskie", riverId: "odra" },
+  { stationName: "Darłowo", warningLevel: 570, alarmLevel: 610, voivodeship: "zachodniopomorskie", riverId: "morze bałtyckie" },
+  { stationName: "Dolsk", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "myśla" },
+  { stationName: "Drawno", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "drawa" },
+  { stationName: "Drawsko Pomorskie", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "drawa" },
+  { stationName: "Dziwnów", warningLevel: 560, alarmLevel: 580, voivodeship: "zachodniopomorskie", riverId: "morze bałtyckie" },
+  { stationName: "Gogolewo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "krąpiel" },
+  { stationName: "Goleniów", warningLevel: 270, alarmLevel: 320, voivodeship: "zachodniopomorskie", riverId: "ina" },
+  { stationName: "Gozdowice", warningLevel: 480, alarmLevel: 530, voivodeship: "zachodniopomorskie", riverId: "odra" },
+  { stationName: "Gozdowice", warningLevel: 440, alarmLevel: 500, voivodeship: "zachodniopomorskie", riverId: "odra" }, // Note: Same station, river, voivodeship but different levels - kept
+  { stationName: "Gryfino", warningLevel: 570, alarmLevel: 600, voivodeship: "zachodniopomorskie", riverId: "odra" },
+  { stationName: "Gwda Wielka", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "gwda" },
+  { stationName: "Kołobrzeg", warningLevel: 570, alarmLevel: 610, voivodeship: "zachodniopomorskie", riverId: "morze bałtyckie" },
+  { stationName: "Kulice", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "sapólna" },
+  { stationName: "Morzyca", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "mała ina" },
+  { stationName: "Myślibórz", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "myśla" },
+  { stationName: "Nadarzyce", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "piawa" },
+  { stationName: "Okunica", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "płonia" },
+  { stationName: "Pieszcz", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "moszczeniczka" },
+  { stationName: "Resko", warningLevel: 410, alarmLevel: 430, voivodeship: "zachodniopomorskie", riverId: "rega" },
+  { stationName: "Stargard", warningLevel: 250, alarmLevel: 280, voivodeship: "zachodniopomorskie", riverId: "ina" },
+  { stationName: "Stary Kraków", warningLevel: 460, alarmLevel: 500, voivodeship: "zachodniopomorskie", riverId: "wieprza" },
+  { stationName: "Storkowo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
+  { stationName: "Szczecin Most Długi", warningLevel: 570, alarmLevel: 600, voivodeship: "zachodniopomorskie", riverId: "odra" },
+  { stationName: "Szczecin-Podjuchy", warningLevel: 580, alarmLevel: 610, voivodeship: "zachodniopomorskie", riverId: "regalica" },
+  { stationName: "Świnoujście", warningLevel: 560, alarmLevel: 580, voivodeship: "zachodniopomorskie", riverId: "morze bałtyckie" },
+  { stationName: "Trzebież", warningLevel: 540, alarmLevel: 560, voivodeship: "zachodniopomorskie", riverId: "zalew szczeciński" },
+  { stationName: "Tychówko", warningLevel: 320, alarmLevel: 380, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
+  { stationName: "Widuchowa", warningLevel: 630, alarmLevel: 650, voivodeship: "zachodniopomorskie", riverId: "odra" },
+  { stationName: "Widzielenko", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "gowienica" },
+  { stationName: "Wolin", warningLevel: 560, alarmLevel: 580, voivodeship: "zachodniopomorskie", riverId: "cieśnina dziwna" },
+  { stationName: "Żelewo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "płonia" },
+  { stationName: "Cybulino", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "radew" },
+  { stationName: "Gola Dolna", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "rega" },
+  { stationName: "Grabowo", warningLevel: 160, alarmLevel: 170, voivodeship: "zachodniopomorskie", riverId: "grabowa" },
+  { stationName: "Koszalin", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "dzierżęcinka" },
+  { stationName: "Krąg", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "grabowa" },
+  { stationName: "Łobez", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "rega" },
+  { stationName: "Trzebiatów", warningLevel: 350, alarmLevel: 370, voivodeship: "zachodniopomorskie", riverId: "rega" },
+  { stationName: "Wiesiółka", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "dobrzyca" },
+  { stationName: "Karlino", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
+  { stationName: "Mołstowo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "mołstowa" },
+  { stationName: "Morzyczyn", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "jez. miedwie (płonia)" },
+  { stationName: "Rościencino", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
+  { stationName: "Sławno", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "wieprza" },
+  { stationName: "Zielnowo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "wieprza" },
+
+  // --- wielkopolskie ---
   { stationName: "Dębe", warningLevel: 220, alarmLevel: 250, voivodeship: "wielkopolskie", riverId: "swędrnia" },
   { stationName: "Rydzyna", warningLevel: 200, alarmLevel: 240, voivodeship: "wielkopolskie", riverId: "polski rów" },
   { stationName: "Bogdaj", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "polska woda" },
   { stationName: "Bogusław", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "prosna" },
   { stationName: "Czarnków", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "noteć" },
+  { stationName: "Drawiny", warningLevel: 120, alarmLevel: 170, voivodeship: "wielkopolskie", riverId: "drawa" },
+  { stationName: "Głuszyna", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "kopel" },
+  { stationName: "Grzegorzew", warningLevel: 240, alarmLevel: 280, voivodeship: "wielkopolskie", riverId: "riglewka" },
+  { stationName: "Konojad", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "mogilnica" },
+  { stationName: "Kościan", warningLevel: 180, alarmLevel: 210, voivodeship: "wielkopolskie", riverId: "kanał mosiński" },
+  { stationName: "Kowanówko", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "wełna" },
+  { stationName: "Kraszewice", warningLevel: 240, alarmLevel: 260, voivodeship: "wielkopolskie", riverId: "łużczyca" },
+  { stationName: "Kryż", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "noteć" },
+  { stationName: "Łysek", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "noteć" },
+  { stationName: "Międzychód", warningLevel: 380, alarmLevel: 430, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Noć Kalina", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "noteć" },
+  { stationName: "Odolanów", warningLevel: 120, alarmLevel: 150, voivodeship: "wielkopolskie", riverId: "barycz" },
+  { stationName: "Odolanów", warningLevel: 160, alarmLevel: 190, voivodeship: "wielkopolskie", riverId: "barycz" }, // Note: Different levels
+  { stationName: "Okonek", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "czarna" },
+  { stationName: "Ołobok", warningLevel: 220, alarmLevel: 260, voivodeship: "wielkopolskie", riverId: "ołobok" },
+  { stationName: "Piła", warningLevel: 190, alarmLevel: 220, voivodeship: "wielkopolskie", riverId: "gwda" },
+  { stationName: "Piwonice", warningLevel: 200, alarmLevel: 230, voivodeship: "wielkopolskie", riverId: "prosna" },
+  { stationName: "Posoka", warningLevel: 260, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "powa" },
+  { stationName: "Pruśce", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "wełna" },
+  { stationName: "Ptusza", warningLevel: 240, alarmLevel: 290, voivodeship: "wielkopolskie", riverId: "gwda" },
+  { stationName: "Ryczywół", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "flinta" },
+  { stationName: "Samarzewo", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "wrześnica" },
+  { stationName: "Szamotuły", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "sama" },
+  { stationName: "Trąbczyn", warningLevel: 180, alarmLevel: 230, voivodeship: "wielkopolskie", riverId: "czarna struga" },
+  { stationName: "Ujście", warningLevel: 310, alarmLevel: 330, voivodeship: "wielkopolskie", riverId: "noteć" },
+  { stationName: "Zabrodzie", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "piawa" },
+  { stationName: "Zbąszyń", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "obra" },
+  { stationName: "Białośliwie", warningLevel: 280, alarmLevel: 330, voivodeship: "wielkopolskie", riverId: "noteć" },
+  { stationName: "Chełst", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "miała" },
+  { stationName: "Dąbie", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "ner" },
+  { stationName: "Koło", warningLevel: 340, alarmLevel: 390, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Konin-Morzysław", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "kanał ślesiński" },
+  { stationName: "Kościelec", warningLevel: 240, alarmLevel: 270, voivodeship: "wielkopolskie", riverId: "kiebłaska duża" },
+  { stationName: "Ląd", warningLevel: 330, alarmLevel: 370, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Nowa Wieś Podgórna", warningLevel: 430, alarmLevel: 480, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Oborniki", warningLevel: 420, alarmLevel: 560, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Odolanów", warningLevel: 160, alarmLevel: 190, voivodeship: "wielkopolskie", riverId: "kuroch" },
+  { stationName: "Poznań-Most Rocha", warningLevel: 400, alarmLevel: 500, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Pyzdry", warningLevel: 410, alarmLevel: 450, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Sławsk", warningLevel: 450, alarmLevel: 480, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Śrem", warningLevel: 350, alarmLevel: 400, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Śrem", warningLevel: 400, alarmLevel: 460, voivodeship: "wielkopolskie", riverId: "warta" }, // Note: Different levels
+  { stationName: "Wierzenica", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "główna" },
+  { stationName: "Wronki", warningLevel: 380, alarmLevel: 470, voivodeship: "wielkopolskie", riverId: "warta" },
+  { stationName: "Wyrzysk", warningLevel: 160, alarmLevel: 200, voivodeship: "wielkopolskie", riverId: "łobżonka" },
+  { stationName: "Grabów Nad Prosną", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "prosna" },
+  { stationName: "Raszewy", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "lutynia" },
+  { stationName: "Zaborowo", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "pichna" },
+  { stationName: "Ujście 2", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "noteć" },
+
+  // --- lubelskie ---
   { stationName: "Biłgoraj", warningLevel: 180, alarmLevel: 220, voivodeship: "lubelskie", riverId: "łada" },
   { stationName: "Biskupice", warningLevel: 410, alarmLevel: 450, voivodeship: "lubelskie", riverId: "gielczewka" },
   { stationName: "Bór", warningLevel: null, alarmLevel: null, voivodeship: "lubelskie", riverId: "wyżnica" },
@@ -62,7 +163,7 @@ export const HYDRO_LEVELS = [
   { stationName: "Krzak", warningLevel: null, alarmLevel: null, voivodeship: "lubelskie", riverId: "łabuńka" },
   { stationName: "Lubartów", warningLevel: 430, alarmLevel: 480, voivodeship: "lubelskie", riverId: "wieprz" },
   { stationName: "Michałów", warningLevel: 110, alarmLevel: 170, voivodeship: "lubelskie", riverId: "wieprz" },
-  { stationName: "Michałów", warningLevel: 160, alarmLevel: 190, voivodeship: "lubelskie", riverId: "wieprz" },
+  { stationName: "Michałów", warningLevel: 160, alarmLevel: 190, voivodeship: "lubelskie", riverId: "wieprz" }, // Note: Different levels
   { stationName: "Nielisz", warningLevel: 200, alarmLevel: 230, voivodeship: "lubelskie", riverId: "wieprz" },
   { stationName: "Osuchy", warningLevel: 320, alarmLevel: 400, voivodeship: "lubelskie", riverId: "tanew" },
   { stationName: "Perkowice", warningLevel: null, alarmLevel: null, voivodeship: "lubelskie", riverId: "zielawa" },
@@ -80,11 +181,8 @@ export const HYDRO_LEVELS = [
   { stationName: "Okuninka", warningLevel: null, alarmLevel: null, voivodeship: "lubelskie", riverId: "włodawka" },
   { stationName: "Zażółkiew", warningLevel: null, alarmLevel: null, voivodeship: "lubelskie", riverId: "żółkiewka" },
   { stationName: "Zemborzyce", warningLevel: null, alarmLevel: null, voivodeship: "lubelskie", riverId: "bystrzyca" },
-  { stationName: "Biłgoraj", warningLevel: 180, alarmLevel: 220, voivodeship: "lubelskie", riverId: "łada" },
-  { stationName: "Biskupice", warningLevel: 410, alarmLevel: 450, voivodeship: "lubelskie", riverId: "gielczewka" },
-  { stationName: "Bór", warningLevel: null, alarmLevel: null, voivodeship: "lubelskie", riverId: "wyżnica" },
-  { stationName: "Gozdów", warningLevel: 290, alarmLevel: 350, voivodeship: "lubelskie", riverId: "huczwa" },
-  { stationName: "Krasnystaw", warningLevel: 420, alarmLevel: 470, voivodeship: "lubelskie", riverId: "wieprz" },
+
+  // --- małopolskie ---
   { stationName: "Balice", warningLevel: 340, alarmLevel: 380, voivodeship: "małopolskie", riverId: "rudawa" },
   { stationName: "Biskupice", warningLevel: 410, alarmLevel: 450, voivodeship: "małopolskie", riverId: "stradomka" },
   { stationName: "Borzęcin", warningLevel: 300, alarmLevel: 400, voivodeship: "małopolskie", riverId: "uszwianka" },
@@ -119,29 +217,29 @@ export const HYDRO_LEVELS = [
   { stationName: "Kasinka Mała", warningLevel: 350, alarmLevel: 420, voivodeship: "małopolskie", riverId: "raba" },
   { stationName: "Kęty", warningLevel: null, alarmLevel: null, voivodeship: "małopolskie", riverId: "soła" },
   { stationName: "Krościenko", warningLevel: 320, alarmLevel: 390, voivodeship: "małopolskie", riverId: "dunajec" },
-  { stationName: "Krościenko", warningLevel: 160, alarmLevel: 210, voivodeship: "małopolskie", riverId: "dunajec" },
+  { stationName: "Krościenko", warningLevel: 160, alarmLevel: 210, voivodeship: "małopolskie", riverId: "dunajec" }, // Note: Different levels
   { stationName: "Kościelisko-Kiry", warningLevel: 140, alarmLevel: 180, voivodeship: "małopolskie", riverId: "kirowa woda" },
   { stationName: "Krościenko", warningLevel: 320, alarmLevel: 390, voivodeship: "małopolskie", riverId: "przełom" },
-  { stationName: "Krościenko", warningLevel: 160, alarmLevel: 210, voivodeship: "małopolskie", riverId: "przełom" },
+  { stationName: "Krościenko", warningLevel: 160, alarmLevel: 210, voivodeship: "małopolskie", riverId: "przełom" }, // Note: Different levels
   { stationName: "Laliki", warningLevel: null, alarmLevel: null, voivodeship: "małopolskie", riverId: "wisła" },
   { stationName: "Lask", warningLevel: null, alarmLevel: null, voivodeship: "małopolskie", riverId: "lubietka" },
   { stationName: "Ludźmierz", warningLevel: 230, alarmLevel: 300, voivodeship: "małopolskie", riverId: "wielki rogoźnik" },
-  { stationName: "Ludźmierz", warningLevel: 280, alarmLevel: 350, voivodeship: "małopolskie", riverId: "wielki rogoźnik" },
+  { stationName: "Ludźmierz", warningLevel: 280, alarmLevel: 350, voivodeship: "małopolskie", riverId: "wielki rogoźnik" }, // Note: Different levels
   { stationName: "Ludźmierz", warningLevel: 230, alarmLevel: 300, voivodeship: "małopolskie", riverId: "lepietnica" },
-  { stationName: "Ludźmierz", warningLevel: 280, alarmLevel: 350, voivodeship: "małopolskie", riverId: "lepietnica" },
+  { stationName: "Ludźmierz", warningLevel: 280, alarmLevel: 350, voivodeship: "małopolskie", riverId: "lepietnica" }, // Note: Different levels
   { stationName: "Lubomierz", warningLevel: null, alarmLevel: null, voivodeship: "małopolskie", riverId: "kamienica" },
   { stationName: "Łysa Polana", warningLevel: 220, alarmLevel: 260, voivodeship: "małopolskie", riverId: "rybi potok" },
   { stationName: "Mszana Dolna", warningLevel: 320, alarmLevel: 380, voivodeship: "małopolskie", riverId: "mszanka" },
-  { stationName: "Mszana Dolna", warningLevel: 240, alarmLevel: 340, voivodeship: "małopolskie", riverId: "mszanka" },
+  { stationName: "Mszana Dolna", warningLevel: 240, alarmLevel: 340, voivodeship: "małopolskie", riverId: "mszanka" }, // Note: Different levels
   { stationName: "Muszyna", warningLevel: 210, alarmLevel: 290, voivodeship: "małopolskie", riverId: "poprad" },
   { stationName: "Muszyna-Milik", warningLevel: 260, alarmLevel: 350, voivodeship: "małopolskie", riverId: "poprad" },
   { stationName: "Nowy Sącz", warningLevel: 300, alarmLevel: 380, voivodeship: "małopolskie", riverId: "lubinka" },
-  { stationName: "Nowy Sącz", warningLevel: 250, alarmLevel: 380, voivodeship: "małopolskie", riverId: "lubinka" },
-  { stationName: "Nowy Sącz", warningLevel: 200, alarmLevel: 260, voivodeship: "małopolskie", riverId: "lubinka" },
+  { stationName: "Nowy Sącz", warningLevel: 250, alarmLevel: 380, voivodeship: "małopolskie", riverId: "lubinka" }, // Note: Different levels
+  { stationName: "Nowy Sącz", warningLevel: 200, alarmLevel: 260, voivodeship: "małopolskie", riverId: "lubinka" }, // Note: Different levels
   { stationName: "Nowy Targ", warningLevel: 260, alarmLevel: 350, voivodeship: "małopolskie", riverId: "dunajec" },
   { stationName: "Nowy Sącz", warningLevel: 300, alarmLevel: 380, voivodeship: "małopolskie", riverId: "kamienica" },
-  { stationName: "Nowy Sącz", warningLevel: 250, alarmLevel: 380, voivodeship: "małopolskie", riverId: "kamienica" },
-  { stationName: "Nowy Sącz", warningLevel: 200, alarmLevel: 260, voivodeship: "małopolskie", riverId: "kamienica" },
+  { stationName: "Nowy Sącz", warningLevel: 250, alarmLevel: 380, voivodeship: "małopolskie", riverId: "kamienica" }, // Note: Different levels
+  { stationName: "Nowy Sącz", warningLevel: 200, alarmLevel: 260, voivodeship: "małopolskie", riverId: "kamienica" }, // Note: Different levels
   { stationName: "Ojcow", warningLevel: null, alarmLevel: null, voivodeship: "małopolskie", riverId: "prądnik" },
   { stationName: "Popędzynka", warningLevel: 580, alarmLevel: 750, voivodeship: "małopolskie", riverId: "spółka" },
   { stationName: "Ropa", warningLevel: 280, alarmLevel: 370, voivodeship: "małopolskie", riverId: "rogoźniczanka" },
@@ -151,7 +249,7 @@ export const HYDRO_LEVELS = [
   { stationName: "Stary Sącz", warningLevel: 300, alarmLevel: 400, voivodeship: "małopolskie", riverId: "poprad" },
   { stationName: "Stróża", warningLevel: 220, alarmLevel: 290, voivodeship: "małopolskie", riverId: "raba" },
   { stationName: "Sucha Beskidzka", warningLevel: 215, alarmLevel: 285, voivodeship: "małopolskie", riverId: "skawa" },
-  { stationName: "Sucha Beskidzka", warningLevel: 220, alarmLevel: 270, voivodeship: "małopolskie", riverId: "skawa" },
+  { stationName: "Sucha Beskidzka", warningLevel: 220, alarmLevel: 270, voivodeship: "małopolskie", riverId: "skawa" }, // Note: Different levels
   { stationName: "Tylmanowa", warningLevel: 200, alarmLevel: 250, voivodeship: "małopolskie", riverId: "ochotnica" },
   { stationName: "Uście Gorlickie", warningLevel: 230, alarmLevel: 280, voivodeship: "małopolskie", riverId: "rupa" },
   { stationName: "Ukcie Gorlickie-Żdynia", warningLevel: null, alarmLevel: null, voivodeship: "małopolskie", riverId: "żdynia" },
@@ -174,12 +272,9 @@ export const HYDRO_LEVELS = [
   { stationName: "Oślecze", warningLevel: null, alarmLevel: null, voivodeship: "małopolskie", riverId: "skawa" },
   { stationName: "Stróża", warningLevel: 220, alarmLevel: 290, voivodeship: "małopolskie", riverId: "sława" },
   { stationName: "Sucha Beskidzka", warningLevel: 215, alarmLevel: 285, voivodeship: "małopolskie", riverId: "stryszawka" },
-  { stationName: "Sucha Beskidzka", warningLevel: 220, alarmLevel: 270, voivodeship: "małopolskie", riverId: "stryszawka" },
-  { stationName: "Balice", warningLevel: 340, alarmLevel: 380, voivodeship: "małopolskie", riverId: "rudawa" },
-  { stationName: "Biskupice", warningLevel: 410, alarmLevel: 450, voivodeship: "małopolskie", riverId: "stradomka" },
-  { stationName: "Borzęcin", warningLevel: 300, alarmLevel: 400, voivodeship: "małopolskie", riverId: "uszwianka" },
-  { stationName: "Grybów", warningLevel: 320, alarmLevel: 400, voivodeship: "małopolskie", riverId: "biała" },
-  { stationName: "Jabłonkowiec", warningLevel: null, alarmLevel: null, voivodeship: "małopolskie", riverId: "czosneńka" },
+  { stationName: "Sucha Beskidzka", warningLevel: 220, alarmLevel: 270, voivodeship: "małopolskie", riverId: "stryszawka" }, // Note: Different levels
+
+  // --- lubuskie ---
   { stationName: "Dobroszów Wielki", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "bóbr" },
   { stationName: "Ługi", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "jez. żabie (mierzęcka struga)" },
   { stationName: "Radzyń", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "jez. sławskie (czernica)" },
@@ -189,11 +284,11 @@ export const HYDRO_LEVELS = [
   { stationName: "Gubin", warningLevel: 300, alarmLevel: 400, voivodeship: "lubuskie", riverId: "nysa łużycka" },
   { stationName: "Iłowa", warningLevel: 180, alarmLevel: 200, voivodeship: "lubuskie", riverId: "czarna mała" },
   { stationName: "Kostrzyn Nad Odrą", warningLevel: 360, alarmLevel: 410, voivodeship: "lubuskie", riverId: "warta" },
-  { stationName: "Kostrzyn Nad Odrą", warningLevel: 420, alarmLevel: 470, voivodeship: "lubuskie", riverId: "warta" },
+  { stationName: "Kostrzyn Nad Odrą", warningLevel: 420, alarmLevel: 470, voivodeship: "lubuskie", riverId: "warta" }, // Note: Different levels
   { stationName: "Kostrzyn Nad Odrą", warningLevel: 360, alarmLevel: 410, voivodeship: "lubuskie", riverId: "odra" },
-  { stationName: "Kostrzyn Nad Odrą", warningLevel: 420, alarmLevel: 470, voivodeship: "lubuskie", riverId: "odra" },
+  { stationName: "Kostrzyn Nad Odrą", warningLevel: 420, alarmLevel: 470, voivodeship: "lubuskie", riverId: "odra" }, // Note: Different levels
   { stationName: "Łozy", warningLevel: 280, alarmLevel: 330, voivodeship: "lubuskie", riverId: "kwisa" },
-  { stationName: "Łozy", warningLevel: 350, alarmLevel: 400, voivodeship: "lubuskie", riverId: "kwisa" },
+  { stationName: "Łozy", warningLevel: 350, alarmLevel: 400, voivodeship: "lubuskie", riverId: "kwisa" }, // Note: Different levels
   { stationName: "Maczków", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "ilanka" },
   { stationName: "Mierzęcin", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "mierzęcka struga" },
   { stationName: "Nietków", warningLevel: 370, alarmLevel: 400, voivodeship: "lubuskie", riverId: "odra" },
@@ -202,42 +297,37 @@ export const HYDRO_LEVELS = [
   { stationName: "Nowogród Bobrzański", warningLevel: 250, alarmLevel: 300, voivodeship: "lubuskie", riverId: "bóbr" },
   { stationName: "Połęcko", warningLevel: 310, alarmLevel: 350, voivodeship: "lubuskie", riverId: "odra" },
   { stationName: "Przewoźniki", warningLevel: 220, alarmLevel: 240, voivodeship: "lubuskie", riverId: "skroda" },
-  { stationName: "Przewoźniki", warningLevel: 300, alarmLevel: 340, voivodeship: "lubuskie", riverId: "skroda" },
+  { stationName: "Przewoźniki", warningLevel: 300, alarmLevel: 340, voivodeship: "lubuskie", riverId: "skroda" }, // Note: Different levels
   { stationName: "Przewóz", warningLevel: 290, alarmLevel: 350, voivodeship: "lubuskie", riverId: "nysa łużycka" },
-  { stationName: "Santok", warningLevel: 250, alarmLevel: 330, voivodeship: "lubuskie", riverId: "warta" },
   { stationName: "Santok", warningLevel: 420, alarmLevel: 490, voivodeship: "lubuskie", riverId: "warta" },
   { stationName: "Santok", warningLevel: 250, alarmLevel: 330, voivodeship: "lubuskie", riverId: "noteć" },
-  { stationName: "Santok", warningLevel: 420, alarmLevel: 490, voivodeship: "lubuskie", riverId: "noteć" },
   { stationName: "Słubice", warningLevel: 430, alarmLevel: 480, voivodeship: "lubuskie", riverId: "odra" },
-  { stationName: "Słubice", warningLevel: 360, alarmLevel: 410, voivodeship: "lubuskie", riverId: "odra" },
+  { stationName: "Słubice", warningLevel: 360, alarmLevel: 410, voivodeship: "lubuskie", riverId: "odra" }, // Note: Different levels
   { stationName: "Szprotawa", warningLevel: 230, alarmLevel: 270, voivodeship: "lubuskie", riverId: "szprotawa" },
-  { stationName: "Szprotawa", warningLevel: 200, alarmLevel: 250, voivodeship: "lubuskie", riverId: "szprotawa" },
+  { stationName: "Szprotawa", warningLevel: 200, alarmLevel: 250, voivodeship: "lubuskie", riverId: "szprotawa" }, // Note: Different levels
   { stationName: "Świerkocin", warningLevel: 450, alarmLevel: 500, voivodeship: "lubuskie", riverId: "warta" },
   { stationName: "Żagań", warningLevel: 130, alarmLevel: 150, voivodeship: "lubuskie", riverId: "czarna wielka" },
-  { stationName: "Żagań", warningLevel: 340, alarmLevel: 400, voivodeship: "lubuskie", riverId: "czarna wielka" },
+  { stationName: "Żagań", warningLevel: 340, alarmLevel: 400, voivodeship: "lubuskie", riverId: "czarna wielka" }, // Note: Different levels
   { stationName: "Biała Góra", warningLevel: 360, alarmLevel: 470, voivodeship: "lubuskie", riverId: "odra" },
   { stationName: "Gorzów Wielkopolski", warningLevel: 380, alarmLevel: 430, voivodeship: "lubuskie", riverId: "warta" },
-  { stationName: "Gorzów Wielkopolski", warningLevel: 390, alarmLevel: 470, voivodeship: "lubuskie", riverId: "warta" },
+  { stationName: "Gorzów Wielkopolski", warningLevel: 390, alarmLevel: 470, voivodeship: "lubuskie", riverId: "warta" }, // Note: Different levels
   { stationName: "Lubiatów", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "obrzyca" },
   { stationName: "Pleśno", warningLevel: 160, alarmLevel: 200, voivodeship: "lubuskie", riverId: "lubsza" },
   { stationName: "Sądów", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "pliszka" },
   { stationName: "Smolno Wielkie", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "obrzyca" },
   { stationName: "Stary Raduszec", warningLevel: 450, alarmLevel: 500, voivodeship: "lubuskie", riverId: "bóbr" },
   { stationName: "Szprotawa", warningLevel: 230, alarmLevel: 270, voivodeship: "lubuskie", riverId: "bóbr" },
-  { stationName: "Szprotawa", warningLevel: 200, alarmLevel: 250, voivodeship: "lubuskie", riverId: "bóbr" },
+  { stationName: "Szprotawa", warningLevel: 200, alarmLevel: 250, voivodeship: "lubuskie", riverId: "bóbr" }, // Note: Different levels
   { stationName: "Żagań", warningLevel: 130, alarmLevel: 150, voivodeship: "lubuskie", riverId: "bóbr" },
-  { stationName: "Żagań", warningLevel: 340, alarmLevel: 400, voivodeship: "lubuskie", riverId: "bóbr" },
+  { stationName: "Żagań", warningLevel: 340, alarmLevel: 400, voivodeship: "lubuskie", riverId: "bóbr" }, // Note: Different levels
   { stationName: "Gubin", warningLevel: 300, alarmLevel: 400, voivodeship: "lubuskie", riverId: "lubsza" },
   { stationName: "Olszyna", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "nysa łużycka" },
   { stationName: "Sanice", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "nysa łużycka" },
   { stationName: "Sława Śląska", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "czernica" },
   { stationName: "Janiszowice", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "nysa łużycka" },
   { stationName: "Skwierzyna", warningLevel: 380, alarmLevel: 460, voivodeship: "lubuskie", riverId: "warta" },
-  { stationName: "Dobroszów Wielki", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "bóbr" },
-  { stationName: "Ługi", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "jez. żabie (mierzęcka struga)" },
-  { stationName: "Radzyń", warningLevel: null, alarmLevel: null, voivodeship: "lubuskie", riverId: "jez. sławskie (czernica)" },
-  { stationName: "Bledzew", warningLevel: 200, alarmLevel: 220, voivodeship: "lubuskie", riverId: "obra" },
-  { stationName: "Cigacice", warningLevel: 350, alarmLevel: 400, voivodeship: "lubuskie", riverId: "odra" },
+
+  // --- łódzkie ---
   { stationName: "Bielawy", warningLevel: 310, alarmLevel: 360, voivodeship: "łódzkie", riverId: "mroga" },
   { stationName: "Bobry", warningLevel: 130, alarmLevel: 150, voivodeship: "łódzkie", riverId: "warta" },
   { stationName: "Dąbrowa", warningLevel: 370, alarmLevel: 400, voivodeship: "łódzkie", riverId: "czarna" },
@@ -256,14 +346,14 @@ export const HYDRO_LEVELS = [
   { stationName: "Zawada", warningLevel: null, alarmLevel: null, voivodeship: "łódzkie", riverId: "wołbórka" },
   { stationName: "Burzenin", warningLevel: 280, alarmLevel: 320, voivodeship: "łódzkie", riverId: "warta" },
   { stationName: "Działoszyn", warningLevel: 290, alarmLevel: 340, voivodeship: "łódzkie", riverId: "warta" },
-  { stationName: "Działoszyn", warningLevel: 530, alarmLevel: 570, voivodeship: "łódzkie", riverId: "warta" },
+  { stationName: "Działoszyn", warningLevel: 530, alarmLevel: 570, voivodeship: "łódzkie", riverId: "warta" }, // Note: Different levels
   { stationName: "Gieczno", warningLevel: null, alarmLevel: null, voivodeship: "łódzkie", riverId: "moszczenica" },
   { stationName: "Poddębice", warningLevel: 240, alarmLevel: 290, voivodeship: "łódzkie", riverId: "ner" },
   { stationName: "Podgórze", warningLevel: 290, alarmLevel: 330, voivodeship: "łódzkie", riverId: "widawka" },
   { stationName: "Przedbórz", warningLevel: 360, alarmLevel: 400, voivodeship: "łódzkie", riverId: "pilica" },
   { stationName: "Rogoźno", warningLevel: null, alarmLevel: null, voivodeship: "łódzkie", riverId: "widawka" },
   { stationName: "Sieradz", warningLevel: 320, alarmLevel: 370, voivodeship: "łódzkie", riverId: "warta" },
-  { stationName: "Sieradz", warningLevel: 390, alarmLevel: 440, voivodeship: "łódzkie", riverId: "warta" },
+  { stationName: "Sieradz", warningLevel: 390, alarmLevel: 440, voivodeship: "łódzkie", riverId: "warta" }, // Note: Different levels
   { stationName: "Spała", warningLevel: 220, alarmLevel: 280, voivodeship: "łódzkie", riverId: "pilica" },
   { stationName: "Sulejów-Kopalnia", warningLevel: 230, alarmLevel: 260, voivodeship: "łódzkie", riverId: "pilica" },
   { stationName: "Szczerców", warningLevel: 190, alarmLevel: 230, voivodeship: "łódzkie", riverId: "widawka" },
@@ -273,14 +363,11 @@ export const HYDRO_LEVELS = [
   { stationName: "Kuśnie", warningLevel: null, alarmLevel: null, voivodeship: "łódzkie", riverId: "żeglina" },
   { stationName: "Kutno", warningLevel: null, alarmLevel: null, voivodeship: "łódzkie", riverId: "ochnia" },
   { stationName: "Smardzew", warningLevel: null, alarmLevel: null, voivodeship: "łódzkie", riverId: "myja" },
-  { stationName: "Bielawy", warningLevel: 310, alarmLevel: 360, voivodeship: "łódzkie", riverId: "mroga" },
-  { stationName: "Bobry", warningLevel: 130, alarmLevel: 150, voivodeship: "łódzkie", riverId: "warta" },
-  { stationName: "Dąbrowa", warningLevel: 370, alarmLevel: 400, voivodeship: "łódzkie", riverId: "czarna" },
-  { stationName: "Grabno", warningLevel: 230, alarmLevel: 280, voivodeship: "łódzkie", riverId: "grabia" },
-  { stationName: "Kęszyce", warningLevel: 350, alarmLevel: 400, voivodeship: "łódzkie", riverId: "rawka" },
+
+  // --- mazowieckie ---
   { stationName: "Białobrzeg Bliższy", warningLevel: 180, alarmLevel: 220, voivodeship: "mazowieckie", riverId: "omulew" },
   { stationName: "Białobrzegi", warningLevel: 200, alarmLevel: 250, voivodeship: "mazowieckie", riverId: "pilica" },
-  { stationName: "Białobrzegi", warningLevel: 200, alarmLevel: 240, voivodeship: "mazowieckie", riverId: "pilica" },
+  { stationName: "Białobrzegi", warningLevel: 200, alarmLevel: 240, voivodeship: "mazowieckie", riverId: "pilica" }, // Note: Different levels
   { stationName: "Cyganówka", warningLevel: null, alarmLevel: null, voivodeship: "mazowieckie", riverId: "wilga" },
   { stationName: "Czarnowo", warningLevel: 270, alarmLevel: 320, voivodeship: "mazowieckie", riverId: "orz" },
   { stationName: "Hruszew", warningLevel: null, alarmLevel: null, voivodeship: "mazowieckie", riverId: "toczna" },
@@ -333,22 +420,17 @@ export const HYDRO_LEVELS = [
   { stationName: "Kolonia Nadwiślańska", warningLevel: null, alarmLevel: null, voivodeship: "mazowieckie", riverId: "wisła" },
   { stationName: "Nowe Miasto", warningLevel: 160, alarmLevel: 200, voivodeship: "mazowieckie", riverId: "sona" },
   { stationName: "Płock", warningLevel: 700, alarmLevel: 800, voivodeship: "mazowieckie", riverId: "wisła" },
-  { stationName: "Płock", warningLevel: 210, alarmLevel: 250, voivodeship: "mazowieckie", riverId: "wisła" },
+  { stationName: "Płock", warningLevel: 210, alarmLevel: 250, voivodeship: "mazowieckie", riverId: "wisła" }, // Note: Different levels
   { stationName: "Pułtusk", warningLevel: null, alarmLevel: null, voivodeship: "mazowieckie", riverId: "narew" },
   { stationName: "Różan", warningLevel: 400, alarmLevel: 450, voivodeship: "mazowieckie", riverId: "narew" },
   { stationName: "Sochocin", warningLevel: null, alarmLevel: null, voivodeship: "mazowieckie", riverId: "wkra" },
   { stationName: "Zawiszyn", warningLevel: null, alarmLevel: null, voivodeship: "mazowieckie", riverId: "osownica" },
   { stationName: "Zielonka", warningLevel: null, alarmLevel: null, voivodeship: "mazowieckie", riverId: "długa" },
-  { stationName: "Białobrzeg Bliższy", warningLevel: 180, alarmLevel: 220, voivodeship: "mazowieckie", riverId: "omulew" },
-  { stationName: "Białobrzegi", warningLevel: 200, alarmLevel: 250, voivodeship: "mazowieckie", riverId: "pilica" },
-  { stationName: "Białobrzegi", warningLevel: 200, alarmLevel: 240, voivodeship: "mazowieckie", riverId: "pilica" },
-  { stationName: "Cyganówka", warningLevel: null, alarmLevel: null, voivodeship: "mazowieckie", riverId: "wilga" },
-  { stationName: "Czarnowo", warningLevel: 270, alarmLevel: 320, voivodeship: "mazowieckie", riverId: "orz" },
-  { stationName: "Hruszew", warningLevel: null, alarmLevel: null, voivodeship: "mazowieckie", riverId: "toczna" },
+
+  // --- opolskie ---
   { stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "boczne koryto opawy" },
-  { stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "boczne koryto opawy" },
-  { stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "opawa" },
-  { stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "opawa" },
+  { stationName: "Branice", warningLevel: 180, alarmLevel: 250, voivodeship: "opolskie", riverId: "opawa" },
+  { stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "opawa" }, // Note: Different levels
   { stationName: "Brzeg", warningLevel: 460, alarmLevel: 530, voivodeship: "opolskie", riverId: "odra" },
   { stationName: "Dobra", warningLevel: 140, alarmLevel: 200, voivodeship: "opolskie", riverId: "biała" },
   { stationName: "Gorzów Śląski", warningLevel: 160, alarmLevel: 210, voivodeship: "opolskie", riverId: "prosna" },
@@ -381,13 +463,8 @@ export const HYDRO_LEVELS = [
   { stationName: "Malerzowice Wielkie", warningLevel: null, alarmLevel: null, voivodeship: "opolskie", riverId: "nysa kłodzka" },
   { stationName: "Paczków", warningLevel: null, alarmLevel: null, voivodeship: "opolskie", riverId: "nysa kłodzka" },
   { stationName: "Steblów", warningLevel: null, alarmLevel: null, voivodeship: "opolskie", riverId: "osobłoga" },
-  { stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "boczne koryto opawy" },
-  { stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "boczne koryto opawy" },
-  { stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "opawa" },
-  { stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "opawa" },
-  { stationName: "Brzeg", warningLevel: 460, alarmLevel: 530, voivodeship: "opolskie", riverId: "odra" },
-  { stationName: "Dobra", warningLevel: 140, alarmLevel: 200, voivodeship: "opolskie", riverId: "biała" },
-  { stationName: "Gorzów Śląski", warningLevel: 160, alarmLevel: 210, voivodeship: "opolskie", riverId: "prosna" },
+
+  // --- podkarpackie ---
   { stationName: "Dwernik", warningLevel: 200, alarmLevel: 260, voivodeship: "podkarpackie", riverId: "san" },
   { stationName: "Dynów", warningLevel: 300, alarmLevel: 460, voivodeship: "podkarpackie", riverId: "san" },
   { stationName: "Głowaczowa", warningLevel: 220, alarmLevel: 300, voivodeship: "podkarpackie", riverId: "grąbnika" },
@@ -403,7 +480,7 @@ export const HYDRO_LEVELS = [
   { stationName: "Polana", warningLevel: 380, alarmLevel: 430, voivodeship: "podkarpackie", riverId: "czarna" },
   { stationName: "Przemyśl", warningLevel: 380, alarmLevel: 570, voivodeship: "podkarpackie", riverId: "san" },
   { stationName: "Puławy", warningLevel: 400, alarmLevel: 450, voivodeship: "podkarpackie", riverId: "wisłok" },
-  { stationName: "Puławy", warningLevel: 250, alarmLevel: 300, voivodeship: "podkarpackie", riverId: "wisłok" },
+  { stationName: "Puławy", warningLevel: 250, alarmLevel: 300, voivodeship: "podkarpackie", riverId: "wisłok" }, // Note: Different levels
   { stationName: "Rybotycze", warningLevel: 270, alarmLevel: 350, voivodeship: "podkarpackie", riverId: "wiar" },
   { stationName: "Sarzyna", warningLevel: 260, alarmLevel: 320, voivodeship: "podkarpackie", riverId: "trzebośnica" },
   { stationName: "Sieniawa", warningLevel: 220, alarmLevel: 280, voivodeship: "podkarpackie", riverId: "wisłok" },
@@ -419,14 +496,13 @@ export const HYDRO_LEVELS = [
   { stationName: "Hoczew", warningLevel: 200, alarmLevel: 260, voivodeship: "podkarpackie", riverId: "hoczwka" },
   { stationName: "Iskrzynia", warningLevel: 350, alarmLevel: 480, voivodeship: "podkarpackie", riverId: "morwawa" },
   { stationName: "Jasło", warningLevel: 300, alarmLevel: 420, voivodeship: "podkarpackie", riverId: "jasiołka" },
-  { stationName: "Koło", warningLevel: 340, alarmLevel: 390, voivodeship: "podkarpackie", riverId: "wisła" },
-  { stationName: "Koło", warningLevel: 460, alarmLevel: 680, voivodeship: "podkarpackie", riverId: "wisła" },
+  { stationName: "Koło", warningLevel: 460, alarmLevel: 680, voivodeship: "podkarpackie", riverId: "wisła" }, // Note: This might be an error, Koło is usually in Wielkopolskie
   { stationName: "Krajowice", warningLevel: 330, alarmLevel: 450, voivodeship: "podkarpackie", riverId: "wisłoka" },
   { stationName: "Krempna-Kotań", warningLevel: 360, alarmLevel: 410, voivodeship: "podkarpackie", riverId: "wisłoka" },
   { stationName: "Krosno", warningLevel: 360, alarmLevel: 400, voivodeship: "podkarpackie", riverId: "wisłok" },
-  { stationName: "Krosno", warningLevel: 350, alarmLevel: 480, voivodeship: "podkarpackie", riverId: "wisłok" },
+  { stationName: "Krosno", warningLevel: 350, alarmLevel: 480, voivodeship: "podkarpackie", riverId: "wisłok" }, // Note: Different levels
   { stationName: "Krościenko", warningLevel: 320, alarmLevel: 390, voivodeship: "podkarpackie", riverId: "strwiąż" },
-  { stationName: "Krościenko", warningLevel: 160, alarmLevel: 210, voivodeship: "podkarpackie", riverId: "strwiąż" },
+  { stationName: "Krościenko", warningLevel: 160, alarmLevel: 210, voivodeship: "podkarpackie", riverId: "strwiąż" }, // Note: Different levels
   { stationName: "Mielec 2", warningLevel: 480, alarmLevel: 650, voivodeship: "podkarpackie", riverId: "wisłoka" },
   { stationName: "Nienowice", warningLevel: 340, alarmLevel: 460, voivodeship: "podkarpackie", riverId: "wisznia" },
   { stationName: "Nisko", warningLevel: 370, alarmLevel: 500, voivodeship: "podkarpackie", riverId: "san" },
@@ -453,11 +529,8 @@ export const HYDRO_LEVELS = [
   { stationName: "Odrzechowa", warningLevel: null, alarmLevel: null, voivodeship: "podkarpackie", riverId: "odrzechowski" },
   { stationName: "Wisłok Wielki", warningLevel: null, alarmLevel: null, voivodeship: "podkarpackie", riverId: "wisłok" },
   { stationName: "Wola Raniżowska", warningLevel: null, alarmLevel: null, voivodeship: "podkarpackie", riverId: "łęg" },
-  { stationName: "Dwernik", warningLevel: 200, alarmLevel: 260, voivodeship: "podkarpackie", riverId: "san" },
-  { stationName: "Dynów", warningLevel: 300, alarmLevel: 460, voivodeship: "podkarpackie", riverId: "san" },
-  { stationName: "Głowaczowa", warningLevel: 220, alarmLevel: 300, voivodeship: "podkarpackie", riverId: "grąbnika" },
-  { stationName: "Grębów", warningLevel: 320, alarmLevel: 400, voivodeship: "podkarpackie", riverId: "łęg" },
-  { stationName: "Jarosław", warningLevel: 440, alarmLevel: 620, voivodeship: "podkarpackie", riverId: "san" },
+
+  // --- podlaskie ---
   { stationName: "Wólka", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "jez. rospuda filipowska (netta)" },
   { stationName: "Babino", warningLevel: 540, alarmLevel: 570, voivodeship: "podlaskie", riverId: "narew" },
   { stationName: "Białowieża-Park", warningLevel: 180, alarmLevel: 200, voivodeship: "podlaskie", riverId: "narewka" },
@@ -475,7 +548,7 @@ export const HYDRO_LEVELS = [
   { stationName: "Trześcianka", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "rudnia" },
   { stationName: "Zaruzie", warningLevel: 220, alarmLevel: 260, voivodeship: "podlaskie", riverId: "ruż" },
   { stationName: "Białobrzegi", warningLevel: 200, alarmLevel: 250, voivodeship: "podlaskie", riverId: "netta" },
-  { stationName: "Białobrzegi", warningLevel: 200, alarmLevel: 240, voivodeship: "podlaskie", riverId: "netta" },
+  { stationName: "Białobrzegi", warningLevel: 200, alarmLevel: 240, voivodeship: "podlaskie", riverId: "netta" }, // Note: Different levels
   { stationName: "Boćki", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "narew" },
   { stationName: "Bondary", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "nurzec" },
   { stationName: "Brańsk", warningLevel: 250, alarmLevel: 300, voivodeship: "podlaskie", riverId: "nurzec" },
@@ -493,7 +566,7 @@ export const HYDRO_LEVELS = [
   { stationName: "Narew", warningLevel: 170, alarmLevel: 200, voivodeship: "podlaskie", riverId: "narew" },
   { stationName: "Nowogród", warningLevel: 360, alarmLevel: 400, voivodeship: "podlaskie", riverId: "narew" },
   { stationName: "Osowiec", warningLevel: 400, alarmLevel: 430, voivodeship: "podlaskie", riverId: "biebrza" },
-  { stationName: "Osowiec", warningLevel: 460, alarmLevel: 490, voivodeship: "podlaskie", riverId: "biebrza" },
+  { stationName: "Osowiec", warningLevel: 460, alarmLevel: 490, voivodeship: "podlaskie", riverId: "biebrza" }, // Note: Different levels
   { stationName: "Piątnica-Łomża", warningLevel: 410, alarmLevel: 460, voivodeship: "podlaskie", riverId: "narew" },
   { stationName: "Ploski", warningLevel: 330, alarmLevel: 370, voivodeship: "podlaskie", riverId: "narew" },
   { stationName: "Poszeszupie", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "szeszupa" },
@@ -501,7 +574,7 @@ export const HYDRO_LEVELS = [
   { stationName: "Ptaki", warningLevel: 210, alarmLevel: 240, voivodeship: "podlaskie", riverId: "pisa" },
   { stationName: "Raczki", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "netta" },
   { stationName: "Rajgród", warningLevel: 225, alarmLevel: 240, voivodeship: "podlaskie", riverId: "lega" },
-  { stationName: "Rajgród", warningLevel: 140, alarmLevel: 160, voivodeship: "podlaskie", riverId: "lega" },
+  { stationName: "Rajgród", warningLevel: 140, alarmLevel: 160, voivodeship: "podlaskie", riverId: "lega" }, // Note: Different levels
   { stationName: "Rudra", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "jez. rajgrodzkie (lega)" },
   { stationName: "Siemianówka", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "narew" },
   { stationName: "Strękowa Góra", warningLevel: 420, alarmLevel: 440, voivodeship: "podlaskie", riverId: "narew" },
@@ -514,11 +587,8 @@ export const HYDRO_LEVELS = [
   { stationName: "Zelwa", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "marycha" },
   { stationName: "Dolistowo Stare", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "biebrza" },
   { stationName: "Kozarze", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "nurzec" },
-  { stationName: "Wólka", warningLevel: null, alarmLevel: null, voivodeship: "podlaskie", riverId: "jez. rospuda filipowska (netta)" },
-  { stationName: "Babino", warningLevel: 540, alarmLevel: 570, voivodeship: "podlaskie", riverId: "narew" },
-  { stationName: "Białowieża-Park", warningLevel: 180, alarmLevel: 200, voivodeship: "podlaskie", riverId: "narewka" },
-  { stationName: "Chraboły", warningLevel: 310, alarmLevel: 350, voivodeship: "podlaskie", riverId: "orlanka" },
-  { stationName: "Czachy", warningLevel: 320, alarmLevel: 360, voivodeship: "podlaskie", riverId: "wissa" },
+
+  // --- pomorskie ---
   { stationName: "Borucino", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "radunia" },
   { stationName: "Prabuty", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "jez. działęgór (liwa)" },
   { stationName: "Bagart", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "elbląg" },
@@ -540,7 +610,6 @@ export const HYDRO_LEVELS = [
   { stationName: "Hel", warningLevel: 550, alarmLevel: 570, voivodeship: "pomorskie", riverId: "morze bałtyckie" },
   { stationName: "Krynica Morska", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "zalew wiślany" },
   { stationName: "Kwidzyn", warningLevel: 300, alarmLevel: 340, voivodeship: "pomorskie", riverId: "liwa" },
-  { stationName: "Kwidzyn", warningLevel: 300, alarmLevel: 340, voivodeship: "pomorskie", riverId: "liwa" },
   { stationName: "Lębork 2", warningLevel: 150, alarmLevel: 200, voivodeship: "pomorskie", riverId: "leba" },
   { stationName: "Leba", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "morze bałtyckie" },
   { stationName: "Nowy Dwór Gdański", warningLevel: 570, alarmLevel: 590, voivodeship: "pomorskie", riverId: "tuga" },
@@ -555,7 +624,7 @@ export const HYDRO_LEVELS = [
   { stationName: "Suchy Dąb", warningLevel: 600, alarmLevel: 620, voivodeship: "pomorskie", riverId: "bielawa" },
   { stationName: "Swornegacie", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "zbrzyca" },
   { stationName: "Tczew", warningLevel: 820, alarmLevel: 850, voivodeship: "pomorskie", riverId: "wisła" },
-  { stationName: "Tczew", warningLevel: 700, alarmLevel: 820, voivodeship: "pomorskie", riverId: "wisła" },
+  { stationName: "Tczew", warningLevel: 700, alarmLevel: 820, voivodeship: "pomorskie", riverId: "wisła" }, // Note: Different levels
   { stationName: "Tujsk", warningLevel: 570, alarmLevel: 590, voivodeship: "pomorskie", riverId: "szkarpawa" },
   { stationName: "Ustka", warningLevel: 570, alarmLevel: 600, voivodeship: "pomorskie", riverId: "morze bałtyckie" },
   { stationName: "Warszkowski Młyn", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "piaśnica" },
@@ -593,11 +662,8 @@ export const HYDRO_LEVELS = [
   { stationName: "Żelichowo", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "słupia" },
   { stationName: "Lebsko", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "leba" },
   { stationName: "Pruszcz Gdański_Kanał", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "kanał raduński" },
-  { stationName: "Borucino", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "radunia" },
-  { stationName: "Prabuty", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "jez. działęgór (liwa)" },
-  { stationName: "Bagart", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "elbląg" },
-  { stationName: "Bolszewo", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "bolszewka" },
-  { stationName: "Borucino", warningLevel: null, alarmLevel: null, voivodeship: "pomorskie", riverId: "jez. raduńskie górne (radunia)" },
+
+  // --- śląskie ---
   { stationName: "Bieruń Nowy", warningLevel: 220, alarmLevel: 330, voivodeship: "śląskie", riverId: "wisła" },
   { stationName: "Bieruń Stary", warningLevel: null, alarmLevel: null, voivodeship: "śląskie", riverId: "mleczna" },
   { stationName: "Brynica", warningLevel: 180, alarmLevel: 220, voivodeship: "śląskie", riverId: "brynica" },
@@ -672,15 +738,11 @@ export const HYDRO_LEVELS = [
   { stationName: "Nowa Kuźnica", warningLevel: null, alarmLevel: null, voivodeship: "śląskie", riverId: "bóbr stock" },
   { stationName: "Rudziniec", warningLevel: null, alarmLevel: null, voivodeship: "śląskie", riverId: "kłodnica" },
   { stationName: "Rybnik-Paruszowiec", warningLevel: null, alarmLevel: null, voivodeship: "śląskie", riverId: "ruda" },
-  { stationName: "Sławków", warningLevel: null, alarmLevel: null, voivodeship: "śląskie", riverId: "brynica" },
   { stationName: "Tychy", warningLevel: null, alarmLevel: null, voivodeship: "śląskie", riverId: "gostynia" },
   { stationName: "Bojszowy", warningLevel: 170, alarmLevel: 230, voivodeship: "śląskie", riverId: "pszczynka" },
   { stationName: "Zabrzeg", warningLevel: null, alarmLevel: null, voivodeship: "śląskie", riverId: "wisła" },
-  { stationName: "Bieruń Nowy", warningLevel: 220, alarmLevel: 330, voivodeship: "śląskie", riverId: "wisła" },
-  { stationName: "Bieruń Stary", warningLevel: null, alarmLevel: null, voivodeship: "śląskie", riverId: "mleczna" },
-  { stationName: "Brynica", warningLevel: 180, alarmLevel: 220, voivodeship: "śląskie", riverId: "brynica" },
-  { stationName: "Chałupki", warningLevel: 300, alarmLevel: 420, voivodeship: "śląskie", riverId: "odra" },
-  { stationName: "Cieszyn", warningLevel: 140, alarmLevel: 230, voivodeship: "śląskie", riverId: "olza" },
+
+  // --- świętokrzyskie ---
   { stationName: "Bocheniec", warningLevel: 320, alarmLevel: 370, voivodeship: "świętokrzyskie", riverId: "wierna rzeka" },
   { stationName: "Brody Iłżeckie", warningLevel: 200, alarmLevel: 270, voivodeship: "świętokrzyskie", riverId: "kamienna" },
   { stationName: "Czekarzewice", warningLevel: 160, alarmLevel: 220, voivodeship: "świętokrzyskie", riverId: "kamienna" },
@@ -689,7 +751,7 @@ export const HYDRO_LEVELS = [
   { stationName: "Koprzywnica", warningLevel: 290, alarmLevel: 360, voivodeship: "świętokrzyskie", riverId: "koprzywianka" },
   { stationName: "Kunów", warningLevel: 200, alarmLevel: 300, voivodeship: "świętokrzyskie", riverId: "kamienna" },
   { stationName: "Michałów", warningLevel: 110, alarmLevel: 170, voivodeship: "świętokrzyskie", riverId: "kamienna" },
-  { stationName: "Michałów", warningLevel: 160, alarmLevel: 190, voivodeship: "świętokrzyskie", riverId: "kamienna" },
+  { stationName: "Michałów", warningLevel: 160, alarmLevel: 190, voivodeship: "świętokrzyskie", riverId: "kamienna" }, // Note: Different levels
   { stationName: "Mniszek", warningLevel: 270, alarmLevel: 310, voivodeship: "świętokrzyskie", riverId: "nida" },
   { stationName: "Mocha", warningLevel: 370, alarmLevel: 420, voivodeship: "świętokrzyskie", riverId: "łagowica" },
   { stationName: "Nietulisko Duże", warningLevel: 460, alarmLevel: 510, voivodeship: "świętokrzyskie", riverId: "świslina" },
@@ -699,13 +761,13 @@ export const HYDRO_LEVELS = [
   { stationName: "Brzegi", warningLevel: 240, alarmLevel: 300, voivodeship: "świętokrzyskie", riverId: "nida" },
   { stationName: "Bzin", warningLevel: 180, alarmLevel: 230, voivodeship: "świętokrzyskie", riverId: "kamienna" },
   { stationName: "Michałów", warningLevel: 110, alarmLevel: 170, voivodeship: "świętokrzyskie", riverId: "mierzawa" },
-  { stationName: "Michałów", warningLevel: 160, alarmLevel: 190, voivodeship: "świętokrzyskie", riverId: "mierzawa" },
+  { stationName: "Michałów", warningLevel: 160, alarmLevel: 190, voivodeship: "świętokrzyskie", riverId: "mierzawa" }, // Note: Different levels
   { stationName: "Morawica", warningLevel: 250, alarmLevel: 340, voivodeship: "świętokrzyskie", riverId: "czarna nida" },
   { stationName: "Połaniec", warningLevel: 290, alarmLevel: 350, voivodeship: "świętokrzyskie", riverId: "czarna" },
   { stationName: "Raków", warningLevel: 220, alarmLevel: 260, voivodeship: "świętokrzyskie", riverId: "czarna" },
   { stationName: "Rzepin", warningLevel: 400, alarmLevel: 420, voivodeship: "świętokrzyskie", riverId: "świslina" },
   { stationName: "Sandomierz", warningLevel: 580, alarmLevel: 630, voivodeship: "świętokrzyskie", riverId: "wisła" },
-  { stationName: "Sandomierz", warningLevel: 420, alarmLevel: 610, voivodeship: "świętokrzyskie", riverId: "wisła" },
+  { stationName: "Sandomierz", warningLevel: 420, alarmLevel: 610, voivodeship: "świętokrzyskie", riverId: "wisła" }, // Note: Different levels
   { stationName: "Tokarnia", warningLevel: 240, alarmLevel: 300, voivodeship: "świętokrzyskie", riverId: "czarna nida" },
   { stationName: "Wąchock", warningLevel: 140, alarmLevel: 190, voivodeship: "świętokrzyskie", riverId: "kamienna" },
   { stationName: "Wąsosz-Stara Wieś", warningLevel: null, alarmLevel: null, voivodeship: "świętokrzyskie", riverId: "czarna" },
@@ -716,11 +778,8 @@ export const HYDRO_LEVELS = [
   { stationName: "Leszczyny", warningLevel: null, alarmLevel: null, voivodeship: "świętokrzyskie", riverId: "lubrzanka" },
   { stationName: "Wiślica 2", warningLevel: null, alarmLevel: null, voivodeship: "świętokrzyskie", riverId: "nida" },
   { stationName: "Pińczów", warningLevel: 250, alarmLevel: 300, voivodeship: "świętokrzyskie", riverId: "nida" },
-  { stationName: "Bocheniec", warningLevel: 320, alarmLevel: 370, voivodeship: "świętokrzyskie", riverId: "wierna rzeka" },
-  { stationName: "Brody Iłżeckie", warningLevel: 200, alarmLevel: 270, voivodeship: "świętokrzyskie", riverId: "kamienna" },
-  { stationName: "Czekarzewice", warningLevel: 160, alarmLevel: 220, voivodeship: "świętokrzyskie", riverId: "kamienna" },
-  { stationName: "Daleszyce", warningLevel: 200, alarmLevel: 260, voivodeship: "świętokrzyskie", riverId: "czarna nida" },
-  { stationName: "Januszewice", warningLevel: 360, alarmLevel: 410, voivodeship: "świętokrzyskie", riverId: "czarna" },
+
+  // --- warmińsko-mazurskie ---
   { stationName: "Iława", warningLevel: 930, alarmLevel: 940, voivodeship: "warmińsko-mazurskie", riverId: "jez. jeziorak" },
   { stationName: "Żukowo", warningLevel: null, alarmLevel: null, voivodeship: "warmińsko-mazurskie", riverId: "jez. druzno" },
   { stationName: "Bornity", warningLevel: 380, alarmLevel: 440, voivodeship: "warmińsko-mazurskie", riverId: "wałsza" },
@@ -729,16 +788,16 @@ export const HYDRO_LEVELS = [
   { stationName: "Dziarny", warningLevel: 130, alarmLevel: 140, voivodeship: "warmińsko-mazurskie", riverId: "iławka" },
   { stationName: "Elbląg", warningLevel: 590, alarmLevel: 610, voivodeship: "warmińsko-mazurskie", riverId: "elbląg" },
   { stationName: "Ełk", warningLevel: 220, alarmLevel: 235, voivodeship: "warmińsko-mazurskie", riverId: "jez. ełckie" },
-  { stationName: "Ełk", warningLevel: 200, alarmLevel: 230, voivodeship: "warmińsko-mazurskie", riverId: "jez. ełckie" },
+  { stationName: "Ełk", warningLevel: 200, alarmLevel: 230, voivodeship: "warmińsko-mazurskie", riverId: "jez. ełckie" }, // Note: Different levels
   { stationName: "Gołdap 2", warningLevel: 180, alarmLevel: 210, voivodeship: "warmińsko-mazurskie", riverId: "gołdapa" },
   { stationName: "Idzbark", warningLevel: null, alarmLevel: null, voivodeship: "warmińsko-mazurskie", riverId: "drwęca" },
   { stationName: "Jurkiszki", warningLevel: 180, alarmLevel: 210, voivodeship: "warmińsko-mazurskie", riverId: "gołdapa" },
   { stationName: "Krosno", warningLevel: 360, alarmLevel: 400, voivodeship: "warmińsko-mazurskie", riverId: "drwęca warmińska" },
-  { stationName: "Krosno", warningLevel: 350, alarmLevel: 480, voivodeship: "warmińsko-mazurskie", riverId: "drwęca warmińska" },
+  { stationName: "Krosno", warningLevel: 350, alarmLevel: 480, voivodeship: "warmińsko-mazurskie", riverId: "drwęca warmińska" }, // Note: Different levels
   { stationName: "Kuligi", warningLevel: 150, alarmLevel: 180, voivodeship: "warmińsko-mazurskie", riverId: "wel" },
   { stationName: "Lidzbark", warningLevel: 110, alarmLevel: 120, voivodeship: "warmińsko-mazurskie", riverId: "wel" },
   { stationName: "Łozy", warningLevel: 280, alarmLevel: 330, voivodeship: "warmińsko-mazurskie", riverId: "pasłęka" },
-  { stationName: "Łozy", warningLevel: 350, alarmLevel: 400, voivodeship: "warmińsko-mazurskie", riverId: "pasłęka" },
+  { stationName: "Łozy", warningLevel: 350, alarmLevel: 400, voivodeship: "warmińsko-mazurskie", riverId: "pasłęka" }, // Note: Different levels
   { stationName: "Nowa Pasłęka", warningLevel: 590, alarmLevel: 630, voivodeship: "warmińsko-mazurskie", riverId: "zalew wiślany" },
   { stationName: "Nowakowo", warningLevel: 590, alarmLevel: 630, voivodeship: "warmińsko-mazurskie", riverId: "zalew wiślany" },
   { stationName: "Nowe Miasto Lubawskie", warningLevel: 330, alarmLevel: 340, voivodeship: "warmińsko-mazurskie", riverId: "drwęca" },
@@ -779,127 +838,6 @@ export const HYDRO_LEVELS = [
   { stationName: "Wielbark", warningLevel: null, alarmLevel: null, voivodeship: "warmińsko-mazurskie", riverId: "sawica" },
   { stationName: "Olkowo", warningLevel: null, alarmLevel: null, voivodeship: "warmińsko-mazurskie", riverId: "pasłęka" },
   { stationName: "Smokowo", warningLevel: null, alarmLevel: null, voivodeship: "warmińsko-mazurskie", riverId: "dejna" },
-  { stationName: "Iława", warningLevel: 930, alarmLevel: 940, voivodeship: "warmińsko-mazurskie", riverId: "jez. jeziorak" },
-  { stationName: "Żukowo", warningLevel: null, alarmLevel: null, voivodeship: "warmińsko-mazurskie", riverId: "jez. druzno" },
-  { stationName: "Bornity", warningLevel: 380, alarmLevel: 440, voivodeship: "warmińsko-mazurskie", riverId: "wałsza" },
-  { stationName: "Braniewo", warningLevel: 720, alarmLevel: 780, voivodeship: "warmińsko-mazurskie", riverId: "pasłęka" },
-  { stationName: "Bykowo", warningLevel: null, alarmLevel: null, voivodeship: "warmińsko-mazurskie", riverId: "sajna" },
-  { stationName: "Dębe", warningLevel: 220, alarmLevel: 250, voivodeship: "wielkopolskie", riverId: "swędrnia" },
-  { stationName: "Rydzyna", warningLevel: 200, alarmLevel: 240, voivodeship: "wielkopolskie", riverId: "polski rów" },
-  { stationName: "Bogdaj", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "polska woda" },
-  { stationName: "Bogusław", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "prosna" },
-  { stationName: "Czarnków", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "noteć" },
-  { stationName: "Drawiny", warningLevel: 120, alarmLevel: 170, voivodeship: "wielkopolskie", riverId: "drawa" },
-  { stationName: "Głuszyna", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "kopel" },
-  { stationName: "Grzegorzew", warningLevel: 240, alarmLevel: 280, voivodeship: "wielkopolskie", riverId: "riglewka" },
-  { stationName: "Konojad", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "mogilnica" },
-  { stationName: "Kościan", warningLevel: 180, alarmLevel: 210, voivodeship: "wielkopolskie", riverId: "kanał mosiński" },
-  { stationName: "Kowanówko", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "wełna" },
-  { stationName: "Kraszewice", warningLevel: 240, alarmLevel: 260, voivodeship: "wielkopolskie", riverId: "łużczyca" },
-  { stationName: "Kryż", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "noteć" },
-  { stationName: "Łysek", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "noteć" },
-  { stationName: "Międzychód", warningLevel: 380, alarmLevel: 430, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Noć Kalina", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "noteć" },
-  { stationName: "Odolanów", warningLevel: 120, alarmLevel: 150, voivodeship: "wielkopolskie", riverId: "barycz" },
-  { stationName: "Odolanów", warningLevel: 160, alarmLevel: 190, voivodeship: "wielkopolskie", riverId: "barycz" },
-  { stationName: "Okonek", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "czarna" },
-  { stationName: "Ołobok", warningLevel: 220, alarmLevel: 260, voivodeship: "wielkopolskie", riverId: "ołobok" },
-  { stationName: "Piła", warningLevel: 190, alarmLevel: 220, voivodeship: "wielkopolskie", riverId: "gwda" },
-  { stationName: "Piwonice", warningLevel: 200, alarmLevel: 230, voivodeship: "wielkopolskie", riverId: "prosna" },
-  { stationName: "Posoka", warningLevel: 260, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "powa" },
-  { stationName: "Pruśce", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "wełna" },
-  { stationName: "Ptusza", warningLevel: 240, alarmLevel: 290, voivodeship: "wielkopolskie", riverId: "gwda" },
-  { stationName: "Ryczywół", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "flinta" },
-  { stationName: "Samarzewo", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "wrześnica" },
-  { stationName: "Szamotuły", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "sama" },
-  { stationName: "Trąbczyn", warningLevel: 180, alarmLevel: 230, voivodeship: "wielkopolskie", riverId: "czarna struga" },
-  { stationName: "Ujście", warningLevel: 310, alarmLevel: 330, voivodeship: "wielkopolskie", riverId: "noteć" },
-  { stationName: "Zabrodzie", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "piawa" },
-  { stationName: "Zbąszyń", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "obra" },
-  { stationName: "Białośliwie", warningLevel: 280, alarmLevel: 330, voivodeship: "wielkopolskie", riverId: "noteć" },
-  { stationName: "Chełst", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "miała" },
-  { stationName: "Dąbie", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "ner" },
-  { stationName: "Koło", warningLevel: 340, alarmLevel: 390, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Koło", warningLevel: 460, alarmLevel: 680, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Konin-Morzysław", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "kanał ślesiński" },
-  { stationName: "Kościelec", warningLevel: 240, alarmLevel: 270, voivodeship: "wielkopolskie", riverId: "kiebłaska duża" },
-  { stationName: "Ląd", warningLevel: 330, alarmLevel: 370, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Nowa Wieś Podgórna", warningLevel: 430, alarmLevel: 480, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Oborniki", warningLevel: 420, alarmLevel: 560, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Odolanów", warningLevel: 120, alarmLevel: 150, voivodeship: "wielkopolskie", riverId: "kuroch" },
-  { stationName: "Odolanów", warningLevel: 160, alarmLevel: 190, voivodeship: "wielkopolskie", riverId: "kuroch" },
-  { stationName: "Poznań-Most Rocha", warningLevel: 400, alarmLevel: 500, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Pyzdry", warningLevel: 410, alarmLevel: 450, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Sławsk", warningLevel: 450, alarmLevel: 480, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Śrem", warningLevel: 350, alarmLevel: 400, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Śrem", warningLevel: 400, alarmLevel: 460, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Wierzenica", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "główna" },
-  { stationName: "Wronki", warningLevel: 380, alarmLevel: 470, voivodeship: "wielkopolskie", riverId: "warta" },
-  { stationName: "Wyrzysk", warningLevel: 160, alarmLevel: 200, voivodeship: "wielkopolskie", riverId: "łobżonka" },
-  { stationName: "Grabów Nad Prosną", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "prosna" },
-  { stationName: "Raszewy", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "lutynia" },
-  { stationName: "Zaborowo", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "pichna" },
-  { stationName: "Ujście 2", warningLevel: null, alarmLevel: null, voivodeship: "wielkopolskie", riverId: "noteć" },
-  { stationName: "Dębe", warningLevel: 220, alarmLevel: 250, voivodeship: "wielkopolskie", riverId: "swędrnia" },
-  { stationName: "Rydzyna", warningLevel: 200, alarmLevel: 240, voivodeship: "wielkopolskie", riverId: "polski rów" },
-  { stationName: "Bogdaj", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "polska woda" },
-  { stationName: "Bogusław", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "prosna" },
-  { stationName: "Czarnków", warningLevel: 250, alarmLevel: 300, voivodeship: "wielkopolskie", riverId: "noteć" },
-  { stationName: "Stare Drawsko", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "drawa" },
-  { stationName: "Bardy", warningLevel: 360, alarmLevel: 400, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
-  { stationName: "Białogard", warningLevel: 270, alarmLevel: 290, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
-  { stationName: "Białogórzyno", warningLevel: 190, alarmLevel: 210, voivodeship: "zachodniopomorskie", riverId: "radew" },
-  { stationName: "Bielinek", warningLevel: 480, alarmLevel: 550, voivodeship: "zachodniopomorskie", riverId: "odra" },
-  { stationName: "Darłowo", warningLevel: 570, alarmLevel: 610, voivodeship: "zachodniopomorskie", riverId: "morze bałtyckie" },
-  { stationName: "Dolsk", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "myśla" },
-  { stationName: "Drawno", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "drawa" },
-  { stationName: "Drawsko Pomorskie", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "drawa" },
-  { stationName: "Dziwnów", warningLevel: 560, alarmLevel: 580, voivodeship: "zachodniopomorskie", riverId: "morze bałtyckie" },
-  { stationName: "Gogolewo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "krąpiel" },
-  { stationName: "Goleniów", warningLevel: 270, alarmLevel: 320, voivodeship: "zachodniopomorskie", riverId: "ina" },
-  { stationName: "Gozdowice", warningLevel: 480, alarmLevel: 530, voivodeship: "zachodniopomorskie", riverId: "odra" },
-  { stationName: "Gozdowice", warningLevel: 440, alarmLevel: 500, voivodeship: "zachodniopomorskie", riverId: "odra" },
-  { stationName: "Gryfino", warningLevel: 570, alarmLevel: 600, voivodeship: "zachodniopomorskie", riverId: "odra" },
-  { stationName: "Gwda Wielka", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "gwda" },
-  { stationName: "Kołobrzeg", warningLevel: 570, alarmLevel: 610, voivodeship: "zachodniopomorskie", riverId: "morze bałtyckie" },
-  { stationName: "Kulice", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "sapólna" },
-  { stationName: "Morzyca", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "mała ina" },
-  { stationName: "Myślibórz", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "myśla" },
-  { stationName: "Nadarzyce", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "piawa" },
-  { stationName: "Okunica", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "płonia" },
-  { stationName: "Pieszcz", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "moszczeniczka" },
-  { stationName: "Resko", warningLevel: 410, alarmLevel: 430, voivodeship: "zachodniopomorskie", riverId: "rega" },
-  { stationName: "Stargard", warningLevel: 250, alarmLevel: 280, voivodeship: "zachodniopomorskie", riverId: "ina" },
-  { stationName: "Stary Kraków", warningLevel: 460, alarmLevel: 500, voivodeship: "zachodniopomorskie", riverId: "wieprza" },
-  { stationName: "Storkowo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
-  { stationName: "Szczecin Most Długi", warningLevel: 570, alarmLevel: 600, voivodeship: "zachodniopomorskie", riverId: "odra" },
-  { stationName: "Szczecin-Podjuchy", warningLevel: 580, alarmLevel: 610, voivodeship: "zachodniopomorskie", riverId: "regalica" },
-  { stationName: "Świnoujście", warningLevel: 560, alarmLevel: 580, voivodeship: "zachodniopomorskie", riverId: "morze bałtyckie" },
-  { stationName: "Trzebież", warningLevel: 540, alarmLevel: 560, voivodeship: "zachodniopomorskie", riverId: "zalew szczeciński" },
-  { stationName: "Tychówko", warningLevel: 320, alarmLevel: 380, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
-  { stationName: "Widuchowa", warningLevel: 630, alarmLevel: 650, voivodeship: "zachodniopomorskie", riverId: "odra" },
-  { stationName: "Widzielenko", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "gowienica" },
-  { stationName: "Wolin", warningLevel: 560, alarmLevel: 580, voivodeship: "zachodniopomorskie", riverId: "cieśnina dziwna" },
-  { stationName: "Żelewo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "płonia" },
-  { stationName: "Cybulino", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "radew" },
-  { stationName: "Gola Dolna", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "rega" },
-  { stationName: "Grabowo", warningLevel: 160, alarmLevel: 170, voivodeship: "zachodniopomorskie", riverId: "grabowa" },
-  { stationName: "Koszalin", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "dzierżęcinka" },
-  { stationName: "Krąg", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "grabowa" },
-  { stationName: "Łobez", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "rega" },
-  { stationName: "Trzebiatów", warningLevel: 350, alarmLevel: 370, voivodeship: "zachodniopomorskie", riverId: "rega" },
-  { stationName: "Wiesiółka", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "dobrzyca" },
-  { stationName: "Karlino", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
-  { stationName: "Mołstowo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "mołstowa" },
-  { stationName: "Morzyczyn", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "jez. miedwie (płonia)" },
-  { stationName: "Rościencino", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
-  { stationName: "Sławno", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "wieprza" },
-  { stationName: "Zielnowo", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "wieprza" },
-  { stationName: "Stare Drawsko", warningLevel: null, alarmLevel: null, voivodeship: "zachodniopomorskie", riverId: "drawa" },
-  { stationName: "Bardy", warningLevel: 360, alarmLevel: 400, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
-  { stationName: "Białogard", warningLevel: 270, alarmLevel: 290, voivodeship: "zachodniopomorskie", riverId: "parsęta" },
-  { stationName: "Białogórzyno", warningLevel: 190, alarmLevel: 210, voivodeship: "zachodniopomorskie", riverId: "radew" },
-  { stationName: "Bielinek", warningLevel: 480, alarmLevel: 550, voivodeship: "zachodniopomorskie", riverId: "odra" },
 
 ];
 
@@ -912,87 +850,127 @@ export const HYDRO_LEVELS = [
  */
 export const findStationLevels = (stationName, voivodeship = null, riverName = null) => {
   if (!stationName) return null;
-  
+
+  const normalizedRiver = riverName ? normalizeRiverName(riverName).toLowerCase() : null;
+  const normalizedStation = stationName.toLowerCase();
+  const normalizedVoivodeship = voivodeship ? voivodeship.toLowerCase() : null;
+
   // 1. Najpierw próbujemy znaleźć dokładne dopasowanie z województwem i rzeką
-  if (voivodeship && riverName) {
+  if (normalizedVoivodeship && normalizedRiver) {
     const exactMatchWithDetails = HYDRO_LEVELS.find(
-      station => 
-        station.stationName.toLowerCase() === stationName.toLowerCase() &&
-        station.voivodeship?.toLowerCase() === voivodeship.toLowerCase() &&
-        station.riverId?.toLowerCase() === normalizeRiverName(riverName).toLowerCase()
+      station =>
+        station.stationName.toLowerCase() === normalizedStation &&
+        station.voivodeship?.toLowerCase() === normalizedVoivodeship &&
+        station.riverId?.toLowerCase() === normalizedRiver
     );
-    
-    if (exactMatchWithDetails) {
-      return exactMatchWithDetails;
-    }
+    if (exactMatchWithDetails) return exactMatchWithDetails;
   }
-  
-  // 2. Próba znalezienia dokładnego dopasowania z województwem
-  if (voivodeship) {
-    const exactMatchWithVoivodeship = HYDRO_LEVELS.find(
-      station => 
-        station.stationName.toLowerCase() === stationName.toLowerCase() &&
-        station.voivodeship?.toLowerCase() === voivodeship.toLowerCase()
+
+  // 2. Próba znalezienia dokładnego dopasowania z województwem (sprawdzamy wszystkie rzeki dla danej nazwy i województwa)
+  if (normalizedVoivodeship) {
+     const matchesWithVoivodeship = HYDRO_LEVELS.filter(
+      station =>
+        station.stationName.toLowerCase() === normalizedStation &&
+        station.voivodeship?.toLowerCase() === normalizedVoivodeship
     );
-    
-    if (exactMatchWithVoivodeship) {
-      return exactMatchWithVoivodeship;
+    // Jeśli jest dokładnie jedno dopasowanie z województwem, zwracamy je
+    if (matchesWithVoivodeship.length === 1) return matchesWithVoivodeship[0];
+    // Jeśli jest więcej niż jedno, ale znamy rzekę, próbujemy dopasować
+    if (matchesWithVoivodeship.length > 1 && normalizedRiver) {
+        const specificRiverMatch = matchesWithVoivodeship.find(
+            station => station.riverId?.toLowerCase() === normalizedRiver
+        );
+        if (specificRiverMatch) return specificRiverMatch;
+        // Jeśli rzeka nie pasuje, ale jest tylko jedno dopasowanie z województwem, możemy je zwrócić jako najlepszy kandydat
+         if (matchesWithVoivodeship.length === 1) return matchesWithVoivodeship[0];
+         // Jeśli nadal jest wiele, zwracamy pierwsze jako domyślne dla tego województwa
+         if (matchesWithVoivodeship.length > 0) return matchesWithVoivodeship[0];
+
+    } else if (matchesWithVoivodeship.length > 0) {
+         // Jeśli nie znamy rzeki, a jest wiele dopasowań, zwracamy pierwsze jako domyślne
+         return matchesWithVoivodeship[0];
     }
+
   }
-  
-  // 3. Próba znalezienia dokładnego dopasowania z rzeką
-  if (riverName) {
-    const exactMatchWithRiver = HYDRO_LEVELS.find(
-      station => 
-        station.stationName.toLowerCase() === stationName.toLowerCase() &&
-        station.riverId?.toLowerCase() === normalizeRiverName(riverName).toLowerCase()
+
+  // 3. Próba znalezienia dokładnego dopasowania z rzeką (sprawdzamy we wszystkich województwach)
+  if (normalizedRiver) {
+     const matchesWithRiver = HYDRO_LEVELS.filter(
+      station =>
+        station.stationName.toLowerCase() === normalizedStation &&
+        station.riverId?.toLowerCase() === normalizedRiver
     );
-    
-    if (exactMatchWithRiver) {
-      return exactMatchWithRiver;
-    }
+     // Jeśli jest dokładnie jedno dopasowanie z rzeką, zwracamy je
+     if (matchesWithRiver.length === 1) return matchesWithRiver[0];
+      // Jeśli jest więcej niż jedno, ale znamy województwo, próbujemy dopasować
+     if (matchesWithRiver.length > 1 && normalizedVoivodeship) {
+         const specificVoivodeshipMatch = matchesWithRiver.find(
+             station => station.voivodeship?.toLowerCase() === normalizedVoivodeship
+         );
+         if (specificVoivodeshipMatch) return specificVoivodeshipMatch;
+         // Jeśli województwo nie pasuje, zwracamy pierwsze jako domyślne dla tej rzeki
+          if (matchesWithRiver.length > 0) return matchesWithRiver[0];
+     } else if (matchesWithRiver.length > 0) {
+         // Jeśli nie znamy województwa, a jest wiele dopasowań, zwracamy pierwsze jako domyślne
+         return matchesWithRiver[0];
+     }
   }
-  
-  // 4. Próbujemy znaleźć dokładne dopasowanie samej nazwy
-  const exactMatch = HYDRO_LEVELS.find(
-    station => station.stationName.toLowerCase() === stationName.toLowerCase()
+
+  // 4. Próbujemy znaleźć dokładne dopasowanie samej nazwy stacji (pierwsze wystąpienie)
+  const exactNameMatches = HYDRO_LEVELS.filter(
+    station => station.stationName.toLowerCase() === normalizedStation
   );
-  
-  if (exactMatch) {
-    return exactMatch;
+  if (exactNameMatches.length === 1) return exactNameMatches[0];
+  if (exactNameMatches.length > 1) {
+      // Jeśli jest wiele stacji o tej samej nazwie, ale mamy dodatkowe info, próbujemy zawęzić
+       if (normalizedVoivodeship && normalizedRiver) {
+            const specificMatch = exactNameMatches.find(s => s.voivodeship?.toLowerCase() === normalizedVoivodeship && s.riverId?.toLowerCase() === normalizedRiver);
+            if (specificMatch) return specificMatch;
+        }
+       if (normalizedVoivodeship) {
+           const voivodeshipMatch = exactNameMatches.find(s => s.voivodeship?.toLowerCase() === normalizedVoivodeship);
+           if (voivodeshipMatch) return voivodeshipMatch;
+       }
+       if (normalizedRiver) {
+           const riverMatch = exactNameMatches.find(s => s.riverId?.toLowerCase() === normalizedRiver);
+           if (riverMatch) return riverMatch;
+       }
+       // Jeśli nadal nie udało się zawęzić, zwracamy pierwsze znalezione
+       return exactNameMatches[0];
   }
-  
+
+
+  // --- Wyszukiwanie częściowe ---
   // 5. Jeśli nie znaleziono dokładnego dopasowania, szukaj częściowego
   let partialMatches = HYDRO_LEVELS.filter(
-    station => station.stationName.toLowerCase().includes(stationName.toLowerCase()) || 
-              stationName.toLowerCase().includes(station.stationName.toLowerCase())
+    station => station.stationName.toLowerCase().includes(normalizedStation) ||
+              normalizedStation.includes(station.stationName.toLowerCase())
   );
-  
+
   // 6. Jeśli mamy wiele częściowych dopasowań i znamy województwo, filtrujemy dalej
-  if (partialMatches.length > 1 && voivodeship) {
+  if (partialMatches.length > 1 && normalizedVoivodeship) {
     const voivodeshipMatches = partialMatches.filter(
-      station => station.voivodeship?.toLowerCase() === voivodeship.toLowerCase()
+      station => station.voivodeship?.toLowerCase() === normalizedVoivodeship
     );
-    
     if (voivodeshipMatches.length > 0) {
       partialMatches = voivodeshipMatches;
     }
   }
-  
+
   // 7. Jeśli nadal mamy wiele dopasowań i znamy rzekę, filtrujemy dalej
-  if (partialMatches.length > 1 && riverName) {
+  if (partialMatches.length > 1 && normalizedRiver) {
     const riverMatches = partialMatches.filter(
-      station => station.riverId?.toLowerCase() === normalizeRiverName(riverName).toLowerCase()
+      station => station.riverId?.toLowerCase() === normalizedRiver
     );
-    
     if (riverMatches.length > 0) {
       partialMatches = riverMatches;
     }
   }
-  
-  // 8. Zwracamy pierwsze znalezione dopasowanie lub null
+
+  // 8. Zwracamy pierwsze znalezione dopasowanie częściowe lub null
   return partialMatches.length > 0 ? partialMatches[0] : null;
 };
+
 
 /**
  * Normalizuje nazwę rzeki do jednolitego formatu (bez polskich znaków, spacji, myślników)
@@ -1001,15 +979,15 @@ export const findStationLevels = (stationName, voivodeship = null, riverName = n
  */
 const normalizeRiverName = (riverName) => {
   if (!riverName) return '';
-  
+
   return riverName
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[ąćęłńóśźż]/g, char => {
-      const replacements = { 'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z' };
-      return replacements[char] || char;
-    })
-    .replace(/[\s\-]/g, '');
-
-  }
+    .replace(/[\u0300-\u036f]/g, "") // Usuń znaki diakrytyczne
+    .replace(/ł/g, "l") // Zamień ł na l
+    // .replace(/[ąćęłńóśźż]/g, char => { // Usunięte, bo normalize NFD + replace diacritics jest lepsze
+    //   const replacements = { 'ą': 'a', 'ć': 'c', 'ę': 'e', /*'ł': 'l',*/ 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z' };
+    //   return replacements[char] || char;
+    // })
+    .replace(/[\s\-()]/g, ''); // Usuń spacje, myślniki i nawiasy
+};

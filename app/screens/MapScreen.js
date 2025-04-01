@@ -1,14 +1,15 @@
 // Plik: app/screens/MapScreen.js
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, Text } from 'react-native';
-import MapView, { Marker, Callout, Polyline, UrlTile } from 'react-native-maps';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, Dimensions, Text, TouchableOpacity } from 'react-native';
+import MapView, { Marker, Callout, Circle, UrlTile } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useRefresh } from '../context/RefreshContext';
 import Loader from '../components/Loader';
 import CustomCallout from '../components/CustomCallout';
 import { fetchStations } from '../api/stationsApi';
-import { getRiverCoordinates } from '../services/riverCoordinatesService';
+import { HYDRO_STATION_COORDINATES } from '../services/stationCoordinatesService';
 
 // Współrzędne miast wojewódzkich w Polsce
 const VOIVODESHIP_CAPITALS = {
@@ -29,40 +30,7 @@ const VOIVODESHIP_CAPITALS = {
   "Opole": { latitude: 50.6751, longitude: 17.9213 },
   "Gorzów Wielkopolski": { latitude: 52.7368, longitude: 15.2299 },
   "Zielona Góra": { latitude: 51.9355, longitude: 15.5062 },
-  "Toruń": { latitude: 53.0138, longitude: 18.5981 } // Czasem wymieniane obok Bydgoszczy
-};
-
-// Funkcja pomocnicza do grupowania stacji według rzek
-const groupStationsByRiver = (stations) => {
-  const rivers = {};
-  
-  stations.forEach(station => {
-    if (!station.river) return;
-    
-    if (!rivers[station.river]) {
-      rivers[station.river] = [];
-    }
-    
-    rivers[station.river].push(station);
-  });
-  
-  return rivers;
-};
-
-// Funkcja do określania koloru rzeki na podstawie stanu stacji
-const getRiverColor = (stations, theme) => {
-  // Sprawdź czy którakolwiek ze stacji ma stan alarmowy
-  if (stations.some(station => station.status === 'alarm')) {
-    return theme.colors.danger;
-  }
-  
-  // Sprawdź czy którakolwiek ze stacji ma stan ostrzegawczy
-  if (stations.some(station => station.status === 'warning')) {
-    return theme.colors.warning;
-  }
-  
-  // Domyślnie: stan normalny
-  return theme.colors.safe;
+  "Toruń": { latitude: 53.0138, longitude: 18.5981 }
 };
 
 export default function MapScreen() {
@@ -71,10 +39,11 @@ export default function MapScreen() {
   const { isRefreshing, addListener, removeListener } = useRefresh();
   const [stations, setStations] = useState([]);
   const [capitalStations, setCapitalStations] = useState([]);
-  const [rivers, setRivers] = useState({});
-  const [riverPaths, setRiverPaths] = useState({});
+  const [stationsWithCoords, setStationsWithCoords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState(6); // Początkowy poziom przybliżenia
+  const mapRef = useRef(null);
   const [region, setRegion] = useState({
     latitude: 52.2297,     // Centered on Poland
     longitude: 19.0122,
@@ -108,53 +77,50 @@ export default function MapScreen() {
     };
   }, []);
 
-  // Po załadowaniu stacji, grupujemy je według rzek i przygotowujemy ścieżki rzek
+  // Po załadowaniu stacji, przygotowujemy dane z współrzędnymi
   useEffect(() => {
     if (stations.length > 0) {
-      // Filtruj tylko stacje w miastach wojewódzkich
-      const stationsInCapitals = stations.filter(station => {
-        // Sprawdź czy nazwa stacji zawiera nazwę któregoś z miast wojewódzkich
-        return Object.keys(VOIVODESHIP_CAPITALS).some(capitalName => 
-          station.name.includes(capitalName)
-        );
-      });
+      // Tworzymy mapę, aby uniknąć duplikatów
+      const stationsMap = new Map();
       
-      // Przypisz współrzędne miast wojewódzkich
-      const stationsWithCoordinates = stationsInCapitals.map(station => {
+      // Pobierz wszystkie stacje z współrzędnymi (z naszych danych lub z API)
+      stations.forEach(station => {
+        // Sprawdź czy stacja ma współrzędne bezpośrednio
+        if (station.latitude && station.longitude) {
+          stationsMap.set(station.id, station);
+          return;
+        }
+        
+        // Sprawdź czy mamy współrzędne w naszej bazie dla tej stacji
+        const stationCoords = HYDRO_STATION_COORDINATES[station.name];
+        if (stationCoords) {
+          stationsMap.set(station.id, {
+            ...station,
+            latitude: stationCoords.latitude,
+            longitude: stationCoords.longitude
+          });
+          return;
+        }
+        
+        // Sprawdź, czy nazwa stacji zawiera nazwę któregoś z miast wojewódzkich
         const matchingCapital = Object.keys(VOIVODESHIP_CAPITALS).find(capitalName => 
           station.name.includes(capitalName)
         );
         
         if (matchingCapital && VOIVODESHIP_CAPITALS[matchingCapital]) {
-          return {
+          stationsMap.set(station.id, {
             ...station,
             latitude: VOIVODESHIP_CAPITALS[matchingCapital].latitude,
             longitude: VOIVODESHIP_CAPITALS[matchingCapital].longitude
-          };
-        }
-        
-        return station;
-      });
-      
-      setCapitalStations(stationsWithCoordinates);
-      
-      // Grupowanie stacji według rzek
-      const groupedRivers = groupStationsByRiver(stations);
-      setRivers(groupedRivers);
-      
-      // Tworzenie ścieżek dla rzek
-      const paths = {};
-      Object.keys(groupedRivers).forEach(riverName => {
-        // Pobierz predefiniowane współrzędne dla rzeki
-        const riverCoordinates = getRiverCoordinates(riverName);
-        
-        if (riverCoordinates.length > 0) {
-          // Użyj predefiniowanych współrzędnych
-          paths[riverName] = riverCoordinates;
+          });
         }
       });
       
-      setRiverPaths(paths);
+      // Konwertuj mapę z powrotem na tablicę
+      setStationsWithCoords(Array.from(stationsMap.values()));
+      
+      // Nie potrzebujemy już oddzielnej listy dla stacji w miastach wojewódzkich
+      setCapitalStations([]);
     }
   }, [stations]);
 
@@ -187,14 +153,74 @@ export default function MapScreen() {
     });
   };
 
-  // Funkcja pomocnicza do ustalania koloru markera na podstawie statusu stacji
-  const getMarkerColor = (status) => {
+  const handleRegionChange = (newRegion) => {
+    setRegion(newRegion);
+    
+    // Oblicz przybliżenie na podstawie rozmiaru widoku
+    // Im mniejsze latitudeDelta, tym większe przybliżenie
+    const newZoom = Math.round(Math.log2(360 / newRegion.latitudeDelta));
+    setCurrentZoom(newZoom);
+  };
+
+  // Funkcja pomocnicza do ustalania koloru na podstawie statusu stacji
+  const getStatusColor = (status) => {
     switch (status) {
       case 'alarm': return theme.colors.danger;
       case 'warning': return theme.colors.warning;
       case 'normal': return theme.colors.safe;
       default: return theme.colors.info;
     }
+  };
+  
+  // Funkcja do ustalenia czy stacja jest widoczna na podstawie przybliżenia
+  const isStationVisible = (station, zoom, region) => {
+    // Przy małym przybliżeniu pokazuj stacje z większą ważnością
+    // (np. te z większym przepływem lub w większych miastach)
+    if (zoom < 7) {
+      // Pokazuj tylko najważniejsze stacje przy małym przybliżeniu
+      // Możemy użyć prostego filtra bazującego na nazwie rzeki lub wartości przepływu
+      const isImportantRiver = station.river && 
+        ['Wisła', 'Odra', 'Warta', 'Bug', 'San', 'Narew'].includes(station.river);
+      
+      return isImportantRiver;
+    }
+    
+    // Przy dużym przybliżeniu (zoom >= 13) pokazuj wszystkie stacje w obszarze widoku
+    if (zoom >= 13) {
+      // Sprawdź czy stacja jest w aktualnym obszarze widoku (z marginesem)
+      const latDelta = region.latitudeDelta * 0.6; // 60% zakresu jako margines
+      const lonDelta = region.longitudeDelta * 0.6;
+      
+      return (
+        station.latitude >= region.latitude - latDelta &&
+        station.latitude <= region.latitude + latDelta &&
+        station.longitude >= region.longitude - lonDelta &&
+        station.longitude <= region.longitude + lonDelta
+      );
+    }
+    
+    // Obliczamy odległość od aktualnego centrum mapy
+    const distanceFromCenter = Math.sqrt(
+      Math.pow(station.latitude - region.latitude, 2) +
+      Math.pow(station.longitude - region.longitude, 2)
+    );
+    
+    // Określamy widoczność stacji w zależności od przybliżenia i odległości od centrum
+    const visibilityThreshold = zoom < 9 ? 0.6 : 
+                               zoom < 11 ? 1.2 : 
+                               zoom < 13 ? 2.5 : 4.0;
+    
+    return distanceFromCenter <= visibilityThreshold;
+  };
+  
+  // Funkcja do określania rozmiaru kółka w zależności od przybliżenia
+  const getCircleRadius = () => {
+    // Znaczne zmniejszenie rozmiarów kółek, aby nie nakładały się na siebie
+    return currentZoom < 7 ? 8000 :  // Duże kółka przy małym przybliżeniu
+           currentZoom < 9 ? 4000 :  // Średnie kółka przy średnim przybliżeniu
+           currentZoom < 11 ? 2000 : // Mniejsze kółka przy dużym przybliżeniu
+           currentZoom < 13 ? 1000 : // Małe kółka przy bardzo dużym przybliżeniu
+           500;                     // Bardzo małe kółka przy maksymalnym przybliżeniu
   };
 
   if (loading && !refreshing) {
@@ -204,9 +230,10 @@ export default function MapScreen() {
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         region={region}
-        onRegionChangeComplete={setRegion}
+        onRegionChangeComplete={handleRegionChange}
         showsUserLocation={true}
         showsMyLocationButton={true}
         showsCompass={true}
@@ -223,71 +250,89 @@ export default function MapScreen() {
           flipY={false}
         />
         
-        {/* Renderowanie linii rzek */}
-        {Object.keys(riverPaths).map(riverName => {
-          const riverPath = riverPaths[riverName];
-          const riverStations = rivers[riverName] || [];
-          const riverColor = getRiverColor(riverStations, theme);
+        {/* Kółka dla wszystkich stacji z poziomem wody */}
+        {stationsWithCoords.map(station => {
+          // Sprawdzamy, czy stacja powinna być widoczna przy obecnym przybliżeniu
+          if (!isStationVisible(station, currentZoom, region)) return null;
           
-          if (!riverPath || riverPath.length < 2) return null;
+          // Promień kółka zależny od przybliżenia
+          const radius = getCircleRadius();
           
           return (
-            <Polyline
-              key={`river-${riverName}`}
-              coordinates={riverPath}
-              strokeColor={riverColor}
-              strokeWidth={4}
-              lineDashPattern={[1, 0]} // Linia ciągła
-              lineJoin="round"
-              zIndex={1} // Pod markerami
-            />
+            <React.Fragment key={`station-${station.id}-${station.name}`}>
+              <Circle
+                center={{
+                  latitude: station.latitude,
+                  longitude: station.longitude
+                }}
+                radius={radius}
+                fillColor={`${getStatusColor(station.status)}80`} // Dodanie przezroczystości (alpha 80)
+                strokeColor={getStatusColor(station.status)}
+                strokeWidth={1}
+                zIndex={1}
+              />
+              {/* Dodanie etykiety z wartością poziomu wody dla większych przybliżeń */}
+              {currentZoom >= 10 && (
+                <Marker
+                  coordinate={{
+                    latitude: station.latitude,
+                    longitude: station.longitude
+                  }}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                  title={station.name}
+                  tracksViewChanges={false}
+                >
+                  <View style={[styles.levelLabel, { backgroundColor: theme.dark ? '#000000AA' : '#FFFFFFAA' }]}>
+                    <Text style={[styles.levelText, { color: theme.dark ? '#FFF' : '#000' }]}>
+                      {station.level}
+                    </Text>
+                  </View>
+                </Marker>
+              )}
+              <Marker
+                coordinate={{
+                  latitude: station.latitude,
+                  longitude: station.longitude
+                }}
+                title={station.name}
+                description={`${station.river || 'Brak danych'} - ${station.level} cm`}
+                pinColor="transparent"
+                opacity={0} // Ukryty marker, tylko do callout
+                zIndex={2}
+              >
+                <Callout
+                  tooltip
+                  onPress={() => handleMarkerPress(station)}
+                >
+                  <CustomCallout station={station} />
+                </Callout>
+              </Marker>
+            </React.Fragment>
           );
         })}
-
-        {/* Renderowanie stacji tylko dla miast wojewódzkich */}
-        {capitalStations.map(station => (
-          <Marker
-            key={station.id}
-            coordinate={{
-              latitude: station.latitude,
-              longitude: station.longitude
-            }}
-            pinColor={getMarkerColor(station.status)}
-            title={station.name}
-            description={`${station.river || 'Brak danych'} - ${station.level} cm`}
-            zIndex={2} // Nad liniami
-          >
-            <Callout
-              tooltip
-              onPress={() => handleMarkerPress(station)}
-            >
-              <CustomCallout station={station} />
-            </Callout>
-          </Marker>
-        ))}
         
-        {/* Renderowanie markerów dla miast wojewódzkich bez stacji */}
-        {Object.entries(VOIVODESHIP_CAPITALS).map(([name, coords]) => {
-          // Sprawdź czy miasto już ma stację
-          const hasStation = capitalStations.some(station => 
-            station.name.includes(name)
-          );
-          
-          // Jeśli ma stację, nie pokazuj dodatkowego markera
-          if (hasStation) return null;
-          
-          return (
-            <Marker
-              key={`capital-${name}`}
-              coordinate={coords}
-              pinColor={theme.colors.info}
-              title={name}
-              description="Miasto wojewódzkie"
-              zIndex={2}
-            />
-          );
-        })}
+        {/* Usunięto fragment, który został połączony z kodem dla wszystkich stacji powyżej */}
+        
+        {/* Usunięto markery dla miast wojewódzkich bez stacji */}
       </MapView>
+
+      {/* Panel informacyjny o przybliżeniu */}
+      <View style={[styles.zoomInfo, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+        <Text style={[styles.zoomText, { color: theme.colors.text }]}>
+          Przybliżenie: {currentZoom}
+        </Text>
+        <Text style={[styles.zoomHint, { color: theme.dark ? '#AAA' : '#666' }]}>
+          {currentZoom < 7 
+            ? 'Widoczne miasta wojewódzkie' 
+            : currentZoom < 9 
+              ? 'Widoczne ważniejsze stacje' 
+              : currentZoom < 11
+                ? 'Widoczne większość stacji'
+                : currentZoom < 13
+                  ? 'Widoczne szczegółowe stacje'
+                  : 'Widoczne wszystkie stacje o jednakowym rozmiarze'}
+        </Text>
+      </View>
 
       {/* Legenda */}
       <View style={[styles.legendContainer, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
@@ -348,8 +393,8 @@ const styles = StyleSheet.create({
   },
   legendColor: {
     width: 20,
-    height: 4,
-    borderRadius: 2,
+    height: 20,
+    borderRadius: 10,
     marginRight: 8,
   },
   legendText: {
@@ -366,4 +411,55 @@ const styles = StyleSheet.create({
   attributionText: {
     fontSize: 10,
   },
+  zoomInfo: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    padding: 8,
+    borderRadius: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  zoomText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  zoomHint: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  capitalCallout: {
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 6,
+    borderColor: '#ccc',
+    borderWidth: 0.5,
+    minWidth: 120,
+  },
+  capitalName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: 'black',
+  },
+  capitalDesc: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  levelLabel: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  }
 });
