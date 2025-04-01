@@ -1,4 +1,4 @@
-// Plik: app/components/StationInfo.js
+// Poprawiony komponent StationInfo.js z wojewodztwem i bez duplikatów
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +7,7 @@ export default function StationInfo({ station, theme }) {
   const getLevelIndicator = () => {
     const percentage = Math.min(100, (station.level / station.alarmLevel) * 100);
     let color;
-    
+
     if (station.level >= station.alarmLevel) {
       color = theme.colors.danger;
     } else if (station.level >= station.warningLevel) {
@@ -15,39 +15,23 @@ export default function StationInfo({ station, theme }) {
     } else {
       color = theme.colors.safe;
     }
-    
+
     return (
       <View style={styles.levelIndicatorContainer}>
         <View style={styles.levelIndicatorBackground}>
           <View 
-            style={[
-              styles.levelIndicatorFill, 
-              { 
-                width: `${percentage}%`,
-                backgroundColor: color
-              }
-            ]} 
+            style={[styles.levelIndicatorFill, { width: `${percentage}%`, backgroundColor: color }]} 
           />
         </View>
         <View style={styles.levelMarkers}>
           <View style={styles.markerContainer}>
-            <View 
-              style={[
-                styles.marker, 
-                { backgroundColor: theme.colors.warning }
-              ]} 
-            />
+            <View style={[styles.marker, { backgroundColor: theme.colors.warning }]} />
             <Text style={[styles.markerLabel, { color: theme.colors.text }]}>
               {station.warningLevel} cm
             </Text>
           </View>
           <View style={styles.markerContainer}>
-            <View 
-              style={[
-                styles.marker, 
-                { backgroundColor: theme.colors.danger }
-              ]} 
-            />
+            <View style={[styles.marker, { backgroundColor: theme.colors.danger }]} />
             <Text style={[styles.markerLabel, { color: theme.colors.text }]}>
               {station.alarmLevel} cm
             </Text>
@@ -58,88 +42,60 @@ export default function StationInfo({ station, theme }) {
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
+    <View style={[styles.card, { backgroundColor: theme.colors.card }]}>      
       <View style={styles.header}>
-        <View style={styles.riverInfo}>
-          <Ionicons name="water" size={18} color={theme.colors.primary} />
-          <Text style={[styles.riverName, { color: theme.colors.text }]}>
-            {station.river}
-          </Text>
-        </View>
+<View style={styles.riverInfo}>
+  <View style={styles.row}>
+    <Ionicons name="water" size={18} color={theme.colors.primary} />
+    <Text style={[styles.riverName, { color: theme.colors.text }]}>
+      {station.river}
+    </Text>
+  </View>
+  {station.wojewodztwo && (
+    <View style={styles.row}>
+
+ <Text style={[styles.wojewodztwoName, { color: theme.colors.text }]}>
+    {station.wojewodztwo}
+  </Text>
+    </View>
+  )}
+</View>
+
         <View style={styles.updateContainer}>
-          <Text style={[styles.updateTime, { color: theme.dark ? '#AAA' : '#666' }]}>
-            Aktualizacja pomiaru: {station.fullUpdateTime || station.updateTime}
-          </Text>
+          <Text style={[styles.updateTime, { color: theme.dark ? '#AAA' : '#666' }]}> Pomiar: {station.fullUpdateTime || station.updateTime} </Text>
           {station.lastRefresh && (
-            <Text style={[styles.refreshTime, { color: theme.dark ? '#AAA' : '#666' }]}>
-              Ostatnie odświeżenie: {new Date(station.lastRefresh).toLocaleTimeString('pl-PL')}
-            </Text>
+            <Text style={[styles.refreshTime, { color: theme.dark ? '#AAA' : '#666' }]}> Ostatnie odświeżenie: {new Date(station.lastRefresh).toLocaleTimeString('pl-PL')} </Text>
           )}
         </View>
       </View>
-      
+
       <View style={styles.levelContainer}>
-        <Text style={[styles.levelValue, { color: theme.colors.text }]}>
-          {station.level}
-        </Text>
+        <Text style={[styles.levelValue, { color: theme.colors.text }]}> {station.level} </Text>
         <Text style={[styles.levelUnit, { color: theme.colors.text }]}>cm</Text>
       </View>
-      
-     <View style={styles.trendContainer}>
-  <Ionicons 
-    name={
-      station.trend === 'up' 
-        ? 'arrow-up' 
-        : station.trend === 'down' 
-          ? 'arrow-down' 
-          : 'remove'
-    } 
-    size={18} 
-    color={
-      station.trend === 'up' 
-        ? theme.colors.danger 
-        : station.trend === 'down' 
-          ? theme.colors.safe 
-          : theme.colors.text
-    } 
-  />
-  <Text 
-    style={[
-      styles.trendText, 
-      { 
-        color: station.trend === 'up' 
-          ? theme.colors.danger 
-          : station.trend === 'down' 
-            ? theme.colors.safe 
-            : theme.colors.text
-      }
-    ]}
-  >
-    {station.trendValue > 0 ? '+' : ''}{station.trendValue} cm / 24h
-    {station.trend === 'stable' ? ' (stabilny)' : 
-     station.trend === 'up' ? ' (wzrost)' : 
-     ' (spadek)'}
-  </Text>
-</View>
-      
+
+      <View style={styles.trendContainer}>
+        <Ionicons 
+          name={station.trend === 'up' ? 'arrow-up' : station.trend === 'down' ? 'arrow-down' : 'remove'}
+          size={18} 
+          color={station.trend === 'up' ? theme.colors.danger : station.trend === 'down' ? theme.colors.safe : theme.colors.text} 
+        />
+        <Text style={[styles.trendText, { color: station.trend === 'up' ? theme.colors.danger : station.trend === 'down' ? theme.colors.safe : theme.colors.text }]}> 
+          {station.trendValue > 0 ? '+' : ''}{station.trendValue} cm / 24h
+          {station.trend === 'stable' ? ' (stabilny)' : station.trend === 'up' ? ' (wzrost)' : ' (spadek)'}
+        </Text>
+      </View>
+
       {getLevelIndicator()}
-      
+
       <View style={styles.statusContainer}>
         <View style={styles.statusItem}>
-          <Text style={[styles.statusLabel, { color: theme.dark ? '#AAA' : '#666' }]}>
-            Stan ostrzegawczy:
-          </Text>
-          <Text style={[styles.statusValue, { color: theme.colors.text }]}>
-            {station.warningLevel} cm
-          </Text>
+          <Text style={[styles.statusLabel, { color: theme.dark ? '#AAA' : '#666' }]}> Stan ostrzegawczy: </Text>
+          <Text style={[styles.statusValue, { color: theme.colors.text }]}> {station.warningLevel} cm </Text>
         </View>
         <View style={styles.statusItem}>
-          <Text style={[styles.statusLabel, { color: theme.dark ? '#AAA' : '#666' }]}>
-            Stan alarmowy:
-          </Text>
-          <Text style={[styles.statusValue, { color: theme.colors.text }]}>
-            {station.alarmLevel} cm
-          </Text>
+          <Text style={[styles.statusLabel, { color: theme.dark ? '#AAA' : '#666' }]}> Stan alarmowy: </Text>
+          <Text style={[styles.statusValue, { color: theme.colors.text }]}> {station.alarmLevel} cm </Text>
         </View>
       </View>
     </View>
@@ -163,9 +119,23 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 8,
   },
-  riverInfo: {
+riverInfo: {
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+},
+
+row: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+  wojewodztwoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 8,
+  },
+  wojewodztwoName: {
+    fontSize: 13,
+    marginLeft: 4,
   },
   riverName: {
     fontSize: 16,

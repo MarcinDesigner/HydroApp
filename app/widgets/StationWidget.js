@@ -215,12 +215,15 @@ const StationWidget = () => {
         results = allStations.filter(station => 
           station.river && station.river.toLowerCase().includes(query)
         );
+        // Sortowanie alfabetycznie po nazwie stacji
+        results.sort((a, b) => a.name.localeCompare(b.name));
         break;
       
       case 'location':
-        // Wyszukiwanie po nazwie miejscowości
+        // Wyszukiwanie po nazwie miejscowości lub województwie
         results = allStations.filter(station => 
-          station.name && station.name.toLowerCase().includes(query)
+          (station.name && station.name.toLowerCase().includes(query)) ||
+          (station.wojewodztwo && station.wojewodztwo.toLowerCase().includes(query))
         );
         break;
       
@@ -364,40 +367,52 @@ const StationWidget = () => {
           const stationData = allStations.find(s => s.id?.toString() === stationId?.toString());
           
           return (
-            <TouchableOpacity
-              key={stationId}
+  <TouchableOpacity
+    key={stationId}
+    style={[
+      styles.stationItem,
+      selectedStationId === stationId && { backgroundColor: theme.colors.primary },
+      { borderColor: theme.colors.border }
+    ]}
+    onPress={() => handleStationChange(stationId)}
+  >
+    <View style={styles.stationItemContent}>
+      <Text
+        style={[
+          styles.stationName,
+          { color: selectedStationId === stationId ? 'white' : theme.colors.text }
+        ]}
+      >
+        {stationData ? stationData.name : stationId}
+      </Text>
+      {stationData && (
+        <View>
+          <Text
+            style={[
+              styles.stationSubtitle,
+              { color: selectedStationId === stationId ? '#E0E0E0' : theme.dark ? '#AAA' : '#666' }
+            ]}
+          >
+            {stationData.river || 'Brak danych'}
+          </Text>
+          {stationData.wojewodztwo && (
+            <Text
               style={[
-                styles.stationItem,
-                selectedStationId === stationId && { backgroundColor: theme.colors.primary },
-                { borderColor: theme.colors.border }
+                styles.stationSubtitle,
+                { color: selectedStationId === stationId ? '#E0E0E0' : theme.dark ? '#AAA' : '#666' }
               ]}
-              onPress={() => handleStationChange(stationId)}
             >
-              <View style={styles.stationItemContent}>
-                <Text
-                  style={[
-                    styles.stationName,
-                    { color: selectedStationId === stationId ? 'white' : theme.colors.text }
-                  ]}
-                >
-                  {stationData ? stationData.name : stationId}
-                </Text>
-                {stationData && (
-                  <Text
-                    style={[
-                      styles.stationSubtitle,
-                      { color: selectedStationId === stationId ? '#E0E0E0' : theme.dark ? '#AAA' : '#666' }
-                    ]}
-                  >
-                    {stationData.river || 'Brak danych'}
-                  </Text>
-                )}
-              </View>
-              {selectedStationId === stationId && (
-                <Ionicons name="checkmark-circle" size={20} color="white" />
-              )}
-            </TouchableOpacity>
-          );
+              Woj. {stationData.wojewodztwo}
+            </Text>
+          )}
+        </View>
+      )}
+    </View> {/* <-- dodaj to zamknięcie */}
+    {selectedStationId === stationId && (
+      <Ionicons name="checkmark-circle" size={20} color="white" />
+    )}
+  </TouchableOpacity>
+);
         })}
       </View>
     );
@@ -442,26 +457,41 @@ const StationWidget = () => {
             ]}
             onPress={() => handleStationChange(item.id)}
           >
-            <View>
+            <View style={styles.searchResultContent}>
               <Text style={[styles.searchResultName, { color: theme.colors.text }]}>
                 {item.name}
               </Text>
-              <Text style={[styles.searchResultDetails, { color: theme.dark ? '#AAA' : '#666' }]}>
-                {item.river ? `Rzeka: ${item.river}` : 'Brak danych o rzece'}
-              </Text>
-              <Text style={[styles.searchResultDetails, { color: theme.dark ? '#AAA' : '#666' }]}>
-                ID: {item.id}
-              </Text>
+              <View style={styles.searchResultDetails}>
+                <Text style={[styles.searchResultSubtitle, { color: theme.dark ? '#AAA' : '#666' }]}>
+                  {item.river ? `Rzeka: ${item.river}` : 'Brak danych o rzece'}
+                </Text>
+                {item.wojewodztwo && (
+                  <Text style={[styles.searchResultSubtitle, { color: theme.dark ? '#AAA' : '#666' }]}>
+                    Woj. {item.wojewodztwo}
+                  </Text>
+                )}
+                <Text style={[styles.searchResultSubtitle, { color: theme.dark ? '#AAA' : '#666' }]}>
+                  ID: {item.id}
+                </Text>
+              </View>
             </View>
-            <View style={[
-              styles.statusDot, 
-              { 
-                backgroundColor: 
-                  item.status === 'alarm' ? theme.colors.danger :
-                  item.status === 'warning' ? theme.colors.warning :
-                  theme.colors.safe
-              }
-            ]} />
+            <View style={styles.searchResultIndicators}>
+              <View style={[
+                styles.statusDot, 
+                { 
+                  backgroundColor: 
+                    item.status === 'alarm' ? theme.colors.danger :
+                    item.status === 'warning' ? theme.colors.warning :
+                    item.status === 'low' ? theme.colors.info :
+                    theme.colors.safe
+                }
+              ]} />
+              {item.level && (
+                <Text style={[styles.levelText, { color: theme.colors.text }]}>
+                  {item.level} cm
+                </Text>
+              )}
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -592,7 +622,16 @@ const StationWidget = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+    searchResultItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+    container: {
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,

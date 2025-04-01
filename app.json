@@ -1,44 +1,28 @@
 {
   "expo": {
     "name": "HydroApp",
-    "slug": "hydro-app",
+    "slug": "HydroApp",
+    "owner": "deximlabs",
     "version": "1.0.0",
+    "sdkVersion": "50.0.0",
+    "platforms": ["ios", "android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.hydroapp"
+      "bundleIdentifier": "com.deximlabs.hydroapp",
+      "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.yourcompany.hydroapp"
+      "package": "com.deximlabs.hydroapp"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Pozwól HydroApp na używanie Twojej lokalizacji do pokazywania najbliższych stacji wodnych."
-        }
-      ]
-    ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "AUTOMATYCZNIE_DODAWANY_PO_eas_init"
       }
     }
   }

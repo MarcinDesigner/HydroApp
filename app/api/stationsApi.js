@@ -19,7 +19,7 @@ export const fetchStations = async () => {
     
     const data = await response.json();
     
-    // Mapowanie danych z API do formatu oczekiwanego przez aplikację
+     // Mapowanie danych z API do formatu oczekiwanego przez aplikację
     return data.map(station => {
       // Wyciągnięcie godziny pomiaru z pełnej daty
       const stationMeasurementDate = station.stan_wody_data_pomiaru ? 
@@ -29,8 +29,12 @@ export const fetchStations = async () => {
       const fullUpdateTime = `${stationMeasurementDate.toLocaleDateString('pl-PL')} ${updateTime}`;
       const lastRefresh = new Date().toISOString();
       
-      // Pobierz poziomy dla tej stacji ze stałych danych
-      const stationLevels = findStationLevels(station.stacja);
+      // Pobierz poziomy dla tej stacji ze stałych danych z dodatkowymi parametrami
+      const stationLevels = findStationLevels(
+        station.stacja, 
+        station.województwo, 
+        station.rzeka
+      );
       
       // Ustaw poziomy alarmowe i ostrzegawcze
       const warningLevel = stationLevels ? stationLevels.warningLevel : 888; // domyślna wartość, jeśli nie znaleziono
@@ -38,14 +42,14 @@ export const fetchStations = async () => {
       
       // Pobierz obecny poziom wody
       const currentLevel = parseFloat(station.stan_wody) || 0;
-      
+        
       // Określ status stacji na podstawie poziomów
-      const status = determineStationStatus(currentLevel, warningLevel, alarmLevel);
+    const status = determineStationStatus(currentLevel, warningLevel, alarmLevel);
       
-      // Obliczamy dane dla wykresów i trend
-      const chartData = generateChartDataForStation(station);
-      const trend = chartData.trend;
-      const trendValue = chartData.trendValue;
+      // Wyciągnięcie trendu (symulowane - API nie ma tych danych)
+      // W rzeczywistym scenariuszu należałoby porównywać z wcześniejszymi pomiarami
+      const trendValue = 0; // brak danych o trendzie
+      const trend = 'stable'; // domyślnie stabilny
       
       // Pobierz współrzędne stacji z bazy danych jeśli są dostępne
       const stationCoordinates = HYDRO_STATION_COORDINATES[station.stacja] || {
@@ -148,8 +152,12 @@ export const fetchStationDetails = async (stationId) => {
       // Kontynuuj mimo błędu
     }
     
-    // Pobierz poziomy dla tej stacji ze stałych danych
-    const stationLevels = findStationLevels(station.stacja);
+ // Pobierz poziomy dla tej stacji ze stałych danych z dodatkowymi parametrami
+    const stationLevels = findStationLevels(
+      station.stacja, 
+      station.województwo, 
+      station.rzeka
+    );
     
     // Ustaw poziomy alarmowe i ostrzegawcze
     const warningLevel = stationLevels ? stationLevels.warningLevel : 888; // domyślna wartość, jeśli nie znaleziono
