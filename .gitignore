@@ -46,3 +46,6 @@ Icon?
 ._*
 .Spotlight-V100
 .TrashesHydroApp.zip
+.DS_Store
+*.zip
+node_modules/
