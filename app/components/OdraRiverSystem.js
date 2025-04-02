@@ -1,24 +1,48 @@
 // Plik: app/components/OdraRiverSystem.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
-  ScrollView, 
   TouchableOpacity, 
-  Dimensions 
+  ScrollView,
+  Dimensions,
+  ActivityIndicator,
+  FlatList
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Svg, G, Line, Circle, Path, Text as SvgText } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import { useRefresh } from '../context/RefreshContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const SVG_WIDTH = SCREEN_WIDTH - 32; // Uwzględniając padding
-const SVG_HEIGHT = 2300; // Wysokość SVG dla całej wizualizacji
 
 const OdraRiverSystem = ({ stations, theme }) => {
   const navigation = useNavigation();
+  const { isRefreshing, addListener, removeListener } = useRefresh();
   const [stationData, setStationData] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [activeRiver, setActiveRiver] = useState('Odra'); // 'Odra', 'Nysa Kłodzka', itd.
+
+  // Efekt do obsługi odświeżania danych
+  useEffect(() => {
+    const handleRefresh = () => {
+      console.log("Odświeżanie danych rzek...");
+      setLoading(true);
+      
+      // Symulacja odświeżania danych
+      setTimeout(() => {
+        setLoading(false);
+      }, 1000);
+    };
+    
+    // Dodaj nasłuchiwacz odświeżania
+    addListener(handleRefresh);
+    
+    // Cleanup
+    return () => {
+      removeListener(handleRefresh);
+    };
+  }, [addListener, removeListener]);
   
   useEffect(() => {
     if (stations && stations.length > 0) {
@@ -31,21 +55,81 @@ const OdraRiverSystem = ({ stations, theme }) => {
     }
   }, [stations]);
 
-  // Znajdź dane stacji po nazwie
-  const getStationByName = (name) => {
-    // Szukaj dokładnego dopasowania
-    if (stationData[name]) {
-      return stationData[name];
-    }
-    
-    // Szukaj częściowego dopasowania
-    const stationNames = Object.keys(stationData);
-    const matchingName = stationNames.find(stationName => 
-      stationName.includes(name) || name.includes(stationName)
-    );
-    
-    return matchingName ? stationData[matchingName] : null;
+  // Grupy stacji według rzek
+  const riverStations = {
+    'Odra': [
+      "Strona czeska", "Chałupki", "Olza", "Krzyżanowice", "Racibórz-Miedonia", 
+      "Koźle", "Krapkowice", "Opole-Groszowice", "UJŚCIE NYSY KŁODZKIEJ", 
+      "Brzeg", "Oława", "Trestno", "WROCŁAW ODRA", "Brzeg Dolny", 
+      "Malczyce", "Ścinawa", "Głogów", "Nowa Sól", "Cigacice", 
+      "Nietków", "Połęcko", "Biała Góra", "Słubice", "Kostrzyn nad Odrą", 
+      "Gozdowice", "Bielinek", "Gryfino", "SZCZECIN MOST DŁUGI"
+    ],
+    'Nysa Kłodzka': [
+      "Nysa Kłodzka", "Bystrzyca Kłodzka", "Kłodzko", "Bardo", 
+      "Nysa", "Kopice", "Skorogoszcz", "UJŚCIE NYSY KŁODZKIEJ"
+    ],
+    'Widawa': [
+      "Widawa", "Zbytowa", "Krzyżanowice (Widawa)", 
+      "Wrocław (ujście Widawy)", "WROCŁAW ODRA"
+    ],
+    'Oława': [
+      "Oława (rzeka)", "Zborowice", "Oława (miejscowość)", 
+      "Wrocław (ujście Oławy)", "WROCŁAW ODRA"
+    ],
+    'Ślęza': [
+      "Ślęza", "Białobrzegie", "Borów", 
+      "Ślęza (miejscowość)", "WROCŁAW ODRA"
+    ],
+    'Bystrzyca': [
+      "Bystrzyca", "Krasków", "Mietków", 
+      "Jarnołtów", "WROCŁAW ODRA"
+    ],
+    'Bóbr': [
+      "Bóbr", "Pilchowice", "Dąbrowa Bolesławiecka", 
+      "Szprotawa", "Żagań", "Dobroszów Wielki", 
+      "Nowogród Bobrzański", "Stary Raduszec", "Połęcko"
+    ]
   };
+
+  // Funkcja do renderowania przycisku rzeki
+  const renderRiverButton = (riverName) => {
+    const isActive = activeRiver === riverName;
+    
+    return (
+      <TouchableOpacity
+        key={riverName}
+        style={[
+          styles.riverButton,
+          isActive && { backgroundColor: theme.colors.primary }
+        ]}
+        onPress={() => setActiveRiver(riverName)}
+      >
+        <Text style={[
+          styles.riverButtonText,
+          isActive && { color: 'white' }
+        ]}>
+          {riverName}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+const getStationByName = (name) => {
+  if (!stationData || Object.keys(stationData).length === 0) return null;
+
+  // Dokładne dopasowanie
+  if (stationData[name]) return stationData[name];
+
+  // Częściowe dopasowanie (ignoruje wielkość liter)
+  const stationNames = Object.keys(stationData);
+  const match = stationNames.find(
+    (stationName) =>
+      stationName.toLowerCase().includes(name.toLowerCase()) ||
+      name.toLowerCase().includes(stationName.toLowerCase())
+  );
+  return match ? stationData[match] : null;
+};
 
   // Funkcja zwracająca kolor dla statusu stacji
   const getStatusColor = (stationName) => {
@@ -76,446 +160,154 @@ const OdraRiverSystem = ({ stations, theme }) => {
       });
     }
   };
-
-  // Koordynaty dla głównych stacji na Odrze (x, y)
-  const mainRiverPath = [
-    { name: "Strona czeska", x: SVG_WIDTH / 2, y: 50 },
-    { name: "Chałupki", x: SVG_WIDTH / 2, y: 100 },
-    { name: "Olza", x: SVG_WIDTH / 2, y: 150 },
-    { name: "Krzyżanowice", x: SVG_WIDTH / 2, y: 200 },
-    { name: "Racibórz-Miedonia", x: SVG_WIDTH / 2, y: 250 },
-    { name: "Koźle", x: SVG_WIDTH / 2, y: 300 },
-    { name: "Krapkowice", x: SVG_WIDTH / 2, y: 350 },
-    { name: "Opole-Groszowice", x: SVG_WIDTH / 2, y: 400 },
-    { name: "UJŚCIE NYSY KŁODZKIEJ", x: SVG_WIDTH / 2, y: 450 },
-    { name: "Brzeg", x: SVG_WIDTH / 2, y: 500 },
-    { name: "Oława", x: SVG_WIDTH / 2, y: 550 },
-    { name: "Trestno", x: SVG_WIDTH / 2, y: 600 },
-    { name: "WROCŁAW ODRA", x: SVG_WIDTH / 2, y: 700 },
-    { name: "Brzeg Dolny", x: SVG_WIDTH / 2, y: 800 },
-    { name: "Malczyce", x: SVG_WIDTH / 2, y: 850 },
-    { name: "Ścinawa", x: SVG_WIDTH / 2, y: 900 },
-    { name: "Głogów", x: SVG_WIDTH / 2, y: 950 },
-    { name: "Nowa Sól", x: SVG_WIDTH / 2, y: 1000 },
-    { name: "Cigacice", x: SVG_WIDTH / 2, y: 1050 },
-    { name: "Nietków", x: SVG_WIDTH / 2, y: 1100 },
-    { name: "Połęcko", x: SVG_WIDTH / 2, y: 1150 },
-    { name: "Biała Góra", x: SVG_WIDTH / 2, y: 1200 },
-    { name: "Słubice", x: SVG_WIDTH / 2, y: 1250 },
-    { name: "Kostrzyn nad Odrą", x: SVG_WIDTH / 2, y: 1300 },
-    { name: "Gozdowice", x: SVG_WIDTH / 2, y: 1350 },
-    { name: "Bielinek", x: SVG_WIDTH / 2, y: 1400 },
-    { name: "Gryfino", x: SVG_WIDTH / 2, y: 1450 },
-    { name: "SZCZECIN MOST DŁUGI", x: SVG_WIDTH / 2, y: 1500 }
-  ];
-
-  // Koordynaty dla Nysy Kłodzkiej
-  const nysaPath = [
-    { name: "Nysa Kłodzka", x: SVG_WIDTH / 2 - 150, y: 200 },
-    { name: "Bystrzyca Kłodzka", x: SVG_WIDTH / 2 - 150, y: 250 },
-    { name: "Kłodzko", x: SVG_WIDTH / 2 - 150, y: 300 },
-    { name: "Bardo", x: SVG_WIDTH / 2 - 150, y: 350 },
-    { name: "Nysa", x: SVG_WIDTH / 2 - 150, y: 380 },
-    { name: "Kopice", x: SVG_WIDTH / 2 - 120, y: 410 },
-    { name: "Skorogoszcz", x: SVG_WIDTH / 2 - 90, y: 430 },
-    // Połączenie z Odrą
-    { name: "UJŚCIE NYSY KŁODZKIEJ", x: SVG_WIDTH / 2, y: 450 }
-  ];
-
-  // Koordynaty dla Widawy
-  const widawaPath = [
-    { name: "Widawa", x: SVG_WIDTH / 2 - 120, y: 600 },
-    { name: "Zbytowa", x: SVG_WIDTH / 2 - 100, y: 620 },
-    { name: "Krzyżanowice (Widawa)", x: SVG_WIDTH / 2 - 80, y: 640 },
-    { name: "Wrocław (ujście Widawy)", x: SVG_WIDTH / 2 - 40, y: 680 },
-    { name: "WROCŁAW ODRA", x: SVG_WIDTH / 2, y: 700 }
-  ];
-
-  // Koordynaty dla Oławy
-  const olawaPath = [
-    { name: "Oława (rzeka)", x: SVG_WIDTH / 2 + 120, y: 600 },
-    { name: "Zborowice", x: SVG_WIDTH / 2 + 100, y: 620 },
-    { name: "Oława (miejscowość)", x: SVG_WIDTH / 2 + 80, y: 640 },
-    { name: "Wrocław (ujście Oławy)", x: SVG_WIDTH / 2 + 40, y: 680 },
-    { name: "WROCŁAW ODRA", x: SVG_WIDTH / 2, y: 700 }
-  ];
-
-  // Koordynaty dla Ślęzy
-  const slezaPath = [
-    { name: "Ślęza", x: SVG_WIDTH / 2 - 120, y: 720 },
-    { name: "Białobrzegie", x: SVG_WIDTH / 2 - 100, y: 730 },
-    { name: "Borów", x: SVG_WIDTH / 2 - 80, y: 740 },
-    { name: "Ślęza (miejscowość)", x: SVG_WIDTH / 2 - 60, y: 750 },
-    { name: "WROCŁAW ODRA", x: SVG_WIDTH / 2, y: 700 }
-  ];
-
-  // Koordynaty dla Bystrzycy
-  const bystrzycaPath = [
-    { name: "Bystrzyca", x: SVG_WIDTH / 2 + 120, y: 720 },
-    { name: "Krasków", x: SVG_WIDTH / 2 + 100, y: 730 },
-    { name: "Mietków", x: SVG_WIDTH / 2 + 80, y: 740 },
-    { name: "Jarnołtów", x: SVG_WIDTH / 2 + 60, y: 750 },
-    { name: "WROCŁAW ODRA", x: SVG_WIDTH / 2, y: 700 }
-  ];
-
-  // Koordynaty dla Bobru
-  const bobrPath = [
-    { name: "Bóbr", x: SVG_WIDTH / 2 + 150, y: 950 },
-    { name: "Pilchowice", x: SVG_WIDTH / 2 + 150, y: 980 },
-    { name: "Dąbrowa Bolesławiecka", x: SVG_WIDTH / 2 + 150, y: 1010 },
-    { name: "Szprotawa", x: SVG_WIDTH / 2 + 150, y: 1040 },
-    { name: "Żagań", x: SVG_WIDTH / 2 + 130, y: 1070 },
-    { name: "Dobroszów Wielki", x: SVG_WIDTH / 2 + 110, y: 1090 },
-    { name: "Nowogród Bobrzański", x: SVG_WIDTH / 2 + 90, y: 1110 },
-    { name: "Stary Raduszec", x: SVG_WIDTH / 2 + 60, y: 1130 },
-    { name: "Połęcko", x: SVG_WIDTH / 2, y: 1150 }
-  ];
-
-  // Funkcja generująca ścieżkę SVG
-  const generatePathD = (pathPoints) => {
-    return pathPoints.map((point, index) => 
-      (index === 0 ? `M ${point.x},${point.y}` : `L ${point.x},${point.y}`)
-    ).join(' ');
-  };
-
-  // Generowanie strzałek wskazujących kierunek przepływu
-  const createFlowArrow = (x1, y1, x2, y2, key) => {
-    // Oblicz kąt linii
-    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-    
-    // Oblicz punkt środkowy
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
+  
+  // Renderuje pojedynczą stację jako box
+  const renderStationItem = ({ item: stationName, index }) => {
+    const statusColor = getStatusColor(stationName);
+    const waterLevel = getWaterLevel(stationName);
+    const isMainJunction = stationName.toUpperCase() === stationName;
     
     return (
-      <G key={`arrow-${key}`} transform={`translate(${midX}, ${midY}) rotate(${angle})`}>
-        <Path 
-          d="M-5,-5 L0,0 L-5,5" 
-          stroke={theme.dark ? '#FFFFFF' : '#000000'}
-          strokeWidth="1.5"
-          fill="none"
-        />
-      </G>
+      <TouchableOpacity
+        style={[
+          styles.stationItem,
+          { borderLeftColor: statusColor },
+          isMainJunction && styles.mainJunctionStation
+        ]}
+        onPress={() => handleStationPress(stationName)}
+      >
+        <Text style={[
+          styles.stationName,
+          isMainJunction && styles.mainJunctionText,
+          { color: theme.colors.text }
+        ]}>
+          {stationName}
+        </Text>
+        
+        <View style={styles.stationDetails}>
+          <Text style={[styles.waterLevel, { color: theme.colors.text }]}>
+            {waterLevel} cm
+          </Text>
+          
+          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+        </View>
+        
+        <Ionicons name="chevron-forward" size={18} color={theme.dark ? '#AAA' : '#666'} />
+      </TouchableOpacity>
     );
   };
 
-  // Funkcja renderująca stację jako punkt na mapie
-  const renderStation = (station, index, isMainStation = false) => {
-    const statusColor = getStatusColor(station.name);
-    const waterLevel = getWaterLevel(station.name);
-    const isMainJunction = station.name.toUpperCase() === station.name;
-    
+  // Dodawanie strzałek przepływu między stacjami
+  const renderFlowArrows = () => {
     return (
-      <G 
-        key={`station-${index}`}
-        onPress={() => handleStationPress(station.name)}
-      >
-        {/* Punkt stacji */}
-        <Circle 
-          cx={station.x} 
-          cy={station.y} 
-          r={isMainJunction ? 8 : 6} 
-          fill={statusColor}
-          stroke={theme.dark ? '#FFFFFF' : '#000000'}
-          strokeWidth="1"
-        />
-        
-        {/* Etykieta z nazwą stacji */}
-        <SvgText
-          x={station.x}
-          y={station.y - 12}
-          fontSize={isMainJunction ? 12 : 10}
-          fontWeight={isMainJunction ? 'bold' : 'normal'}
-          fill={theme.colors.text}
-          textAnchor="middle"
-        >
-          {station.name}
-        </SvgText>
-        
-        {/* Poziom wody */}
-        <SvgText
-          x={station.x}
-          y={station.y + 18}
-          fontSize={11}
-          fill={theme.dark ? '#FFFFFF' : '#000000'}
-          textAnchor="middle"
-        >
-          {waterLevel} cm
-        </SvgText>
-      </G>
+      riverStations[activeRiver].slice(0, -1).map((_, index) => (
+        <View key={`arrow-${index}`} style={styles.flowArrowContainer}>
+          <Ionicons 
+            name="arrow-down" 
+            size={20} 
+            color={activeRiver === 'Odra' ? theme.colors.primary : theme.colors.info} 
+          />
+        </View>
+      ))
     );
   };
 
   return (
     <View style={styles.container}>
+      {/* Wybór rzeki */}
       <ScrollView 
-        horizontal={false} 
-        showsVerticalScrollIndicator={true}
-        style={styles.scrollView}
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.riverButtonsContainer}
+        contentContainerStyle={styles.riverButtonsContent}
       >
-        <Svg width={SVG_WIDTH} height={SVG_HEIGHT} viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}>
-          {/* Główny bieg Odry */}
-          <Path 
-            d={generatePathD(mainRiverPath)} 
-            fill="none" 
-            stroke={theme.colors.primary} 
-            strokeWidth="3"
-          />
-          
-          {/* Strzałki na głównym biegu */}
-          {mainRiverPath.map((point, index) => {
-            if (index === 0) return null;
-            return createFlowArrow(
-              mainRiverPath[index-1].x, 
-              mainRiverPath[index-1].y,
-              point.x,
-              point.y,
-              `main-${index}`
-            );
-          })}
-          
-          {/* Nysa Kłodzka */}
-          <Path 
-            d={generatePathD(nysaPath)} 
-            fill="none" 
-            stroke={theme.colors.info} 
-            strokeWidth="2.5"
-          />
-          
-          {/* Strzałki na Nysie Kłodzkiej */}
-          {nysaPath.map((point, index) => {
-            if (index === 0) return null;
-            return createFlowArrow(
-              nysaPath[index-1].x, 
-              nysaPath[index-1].y,
-              point.x,
-              point.y,
-              `nysa-${index}`
-            );
-          })}
-          
-          {/* Widawa */}
-          <Path 
-            d={generatePathD(widawaPath)} 
-            fill="none" 
-            stroke={theme.colors.info} 
-            strokeWidth="2.5"
-          />
-          
-          {/* Strzałki na Widawie */}
-          {widawaPath.map((point, index) => {
-            if (index === 0) return null;
-            return createFlowArrow(
-              widawaPath[index-1].x, 
-              widawaPath[index-1].y,
-              point.x,
-              point.y,
-              `widawa-${index}`
-            );
-          })}
-          
-          {/* Oława */}
-          <Path 
-            d={generatePathD(olawaPath)} 
-            fill="none" 
-            stroke={theme.colors.info} 
-            strokeWidth="2.5"
-          />
-          
-          {/* Strzałki na Oławie */}
-          {olawaPath.map((point, index) => {
-            if (index === 0) return null;
-            return createFlowArrow(
-              olawaPath[index-1].x, 
-              olawaPath[index-1].y,
-              point.x,
-              point.y,
-              `olawa-${index}`
-            );
-          })}
-          
-          {/* Ślęza */}
-          <Path 
-            d={generatePathD(slezaPath)} 
-            fill="none" 
-            stroke={theme.colors.info} 
-            strokeWidth="2.5"
-          />
-          
-          {/* Strzałki na Ślęzie */}
-          {slezaPath.map((point, index) => {
-            if (index === 0) return null;
-            return createFlowArrow(
-              slezaPath[index-1].x, 
-              slezaPath[index-1].y,
-              point.x,
-              point.y,
-              `sleza-${index}`
-            );
-          })}
-          
-          {/* Bystrzyca */}
-          <Path 
-            d={generatePathD(bystrzycaPath)} 
-            fill="none" 
-            stroke={theme.colors.info} 
-            strokeWidth="2.5"
-          />
-          
-          {/* Strzałki na Bystrzycy */}
-          {bystrzycaPath.map((point, index) => {
-            if (index === 0) return null;
-            return createFlowArrow(
-              bystrzycaPath[index-1].x, 
-              bystrzycaPath[index-1].y,
-              point.x,
-              point.y,
-              `bystrzyca-${index}`
-            );
-          })}
-          
-          {/* Bóbr */}
-          <Path 
-            d={generatePathD(bobrPath)} 
-            fill="none" 
-            stroke={theme.colors.info} 
-            strokeWidth="2.5"
-          />
-          
-          {/* Strzałki na Bobrze */}
-          {bobrPath.map((point, index) => {
-            if (index === 0) return null;
-            return createFlowArrow(
-              bobrPath[index-1].x, 
-              bobrPath[index-1].y,
-              point.x,
-              point.y,
-              `bobr-${index}`
-            );
-          })}
-          
-          {/* Stacje na głównym biegu Odry */}
-          {mainRiverPath.map((station, index) => renderStation(station, index, true))}
-          
-          {/* Stacje na Nysie Kłodzkiej */}
-          {nysaPath.slice(0, -1).map((station, index) => renderStation(station, `nysa-${index}`))}
-          
-          {/* Stacje na Widawie */}
-          {widawaPath.slice(0, -1).map((station, index) => renderStation(station, `widawa-${index}`))}
-          
-          {/* Stacje na Oławie */}
-          {olawaPath.slice(0, -1).map((station, index) => renderStation(station, `olawa-${index}`))}
-          
-          {/* Stacje na Ślęzie */}
-          {slezaPath.slice(0, -1).map((station, index) => renderStation(station, `sleza-${index}`))}
-          
-          {/* Stacje na Bystrzycy */}
-          {bystrzycaPath.slice(0, -1).map((station, index) => renderStation(station, `bystrzyca-${index}`))}
-          
-          {/* Stacje na Bobrze */}
-          {bobrPath.slice(0, -1).map((station, index) => renderStation(station, `bobr-${index}`))}
-          
-          {/* Etykiety rzek */}
-          <SvgText
-            x={SVG_WIDTH / 2}
-            y={25}
-            fontSize={14}
-            fontWeight="bold"
-            fill={theme.colors.primary}
-            textAnchor="middle"
-          >
-            ODRA
-          </SvgText>
-          
-          <SvgText
-            x={SVG_WIDTH / 2 - 150}
-            y={180}
-            fontSize={12}
-            fontWeight="bold"
-            fill={theme.colors.info}
-            textAnchor="middle"
-          >
-            NYSA KŁODZKA
-          </SvgText>
-          
-          <SvgText
-            x={SVG_WIDTH / 2 - 120}
-            y={580}
-            fontSize={12}
-            fontWeight="bold"
-            fill={theme.colors.info}
-            textAnchor="middle"
-          >
-            WIDAWA
-          </SvgText>
-          
-          <SvgText
-            x={SVG_WIDTH / 2 + 120}
-            y={580}
-            fontSize={12}
-            fontWeight="bold"
-            fill={theme.colors.info}
-            textAnchor="middle"
-          >
-            OŁAWA
-          </SvgText>
-          
-          <SvgText
-            x={SVG_WIDTH / 2 - 120}
-            y={700}
-            fontSize={12}
-            fontWeight="bold"
-            fill={theme.colors.info}
-            textAnchor="middle"
-          >
-            ŚLĘZA
-          </SvgText>
-          
-          <SvgText
-            x={SVG_WIDTH / 2 + 120}
-            y={700}
-            fontSize={12}
-            fontWeight="bold"
-            fill={theme.colors.info}
-            textAnchor="middle"
-          >
-            BYSTRZYCA
-          </SvgText>
-          
-          <SvgText
-            x={SVG_WIDTH / 2 + 150}
-            y={930}
-            fontSize={12}
-            fontWeight="bold"
-            fill={theme.colors.info}
-            textAnchor="middle"
-          >
-            BÓBR
-          </SvgText>
-        </Svg>
+        {Object.keys(riverStations).map(renderRiverButton)}
       </ScrollView>
-      
+
+      {/* Tytuł aktywnej rzeki */}
+      <View style={[
+        styles.riverTitleContainer,
+        { backgroundColor: activeRiver === 'Odra' ? theme.colors.primary : theme.colors.info }
+      ]}>
+        <Text style={styles.riverTitle}>
+          {activeRiver.toUpperCase()}
+        </Text>
+      </View>
+
+      {/* Lista stacji */}
+      <View style={styles.flowContainer}>
+        {loading || isRefreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+              Aktualizowanie danych...
+            </Text>
+          </View>
+        ) : (
+          <>
+            {riverStations[activeRiver].map((stationName, index) => (
+              <React.Fragment key={`station-${index}`}>
+                {index > 0 && (
+                  <View style={styles.flowArrowContainer}>
+                    <Ionicons 
+                      name="arrow-down" 
+                      size={20} 
+                      color={activeRiver === 'Odra' ? theme.colors.primary : theme.colors.info} 
+                    />
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={[
+                    styles.stationItem,
+                    { 
+                      borderLeftColor: getStatusColor(stationName),
+                      backgroundColor: theme.colors.card 
+                    },
+                    stationName.toUpperCase() === stationName && styles.mainJunctionStation
+                  ]}
+                  onPress={() => handleStationPress(stationName)}
+                >
+                  <Text style={[
+                    styles.stationName,
+                    stationName.toUpperCase() === stationName && styles.mainJunctionText,
+                    { color: theme.colors.text }
+                  ]}>
+                    {stationName}
+                  </Text>
+                  
+                  <View style={styles.stationDetails}>
+                    <Text style={[styles.waterLevel, { color: theme.colors.text }]}>
+                      {getWaterLevel(stationName)} cm
+                    </Text>
+                    
+                    <View style={[
+                      styles.statusDot, 
+                      { backgroundColor: getStatusColor(stationName) }
+                    ]} />
+                  </View>
+                </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </>
+        )}
+      </View>
+
+      {/* Legenda */}
       <View style={[styles.legendContainer, { backgroundColor: theme.dark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
         <Text style={[styles.legendTitle, { color: theme.colors.text }]}>Stan rzek</Text>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: theme.colors.safe }]} />
-          <Text style={[styles.legendText, { color: theme.colors.text }]}>Normalny</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: theme.colors.warning }]} />
-          <Text style={[styles.legendText, { color: theme.colors.text }]}>Ostrzegawczy</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: theme.colors.danger }]} />
-          <Text style={[styles.legendText, { color: theme.colors.text }]}>Alarmowy</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendLineColor, { backgroundColor: theme.colors.primary }]} />
-          <Text style={[styles.legendText, { color: theme.colors.text }]}>Odra</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendLineColor, { backgroundColor: theme.colors.info }]} />
-          <Text style={[styles.legendText, { color: theme.colors.text }]}>Dopływy</Text>
+        <View style={styles.legendRow}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: theme.colors.safe }]} />
+            <Text style={[styles.legendText, { color: theme.colors.text }]}>Normalny</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: theme.colors.warning }]} />
+            <Text style={[styles.legendText, { color: theme.colors.text }]}>Ostrzegawczy</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: theme.colors.danger }]} />
+            <Text style={[styles.legendText, { color: theme.colors.text }]}>Alarmowy</Text>
+          </View>
         </View>
       </View>
       
@@ -528,11 +320,102 @@ const OdraRiverSystem = ({ stations, theme }) => {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     alignItems: 'center',
     marginBottom: 20,
   },
-  scrollView: {
+  riverButtonsContainer: {
+    maxHeight: 50,
+    marginBottom: 16,
     width: '100%',
+  },
+  riverButtonsContent: {
+    paddingHorizontal: 16,
+  },
+  riverButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginRight: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  riverButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  riverTitleContainer: {
+    padding: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    marginBottom: 16,
+  },
+  riverTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  flowContainer: {
+    width: '90%',
+    alignItems: 'center',
+  },
+  stationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    marginBottom: 4,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  mainJunctionStation: {
+    borderRadius: 10,
+    padding: 14,
+    backgroundColor: '#f8f8f8',
+    borderLeftWidth: 6,
+  },
+  stationName: {
+    fontSize: 14,
+    flex: 1,
+  },
+  mainJunctionText: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  stationDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  waterLevel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  flowArrowContainer: {
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
   },
   legendContainer: {
     padding: 10,
@@ -540,33 +423,28 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     width: '90%',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
   },
   legendTitle: {
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 8,
+    textAlign: 'center',
+  },
+  legendRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 4,
+    marginHorizontal: 4,
   },
   legendColor: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 8,
-  },
-  legendLineColor: {
-    width: 20,
-    height: 4,
-    borderRadius: 2,
-    marginRight: 8,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: 4,
   },
   legendText: {
     fontSize: 12,
@@ -579,4 +457,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default OdraRiverSystem;
+export default React.memo(OdraRiverSystem);

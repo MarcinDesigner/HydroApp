@@ -27,7 +27,10 @@ export default function StationDetails() {
   const { theme } = useTheme();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isRefreshing, addListener, removeListener } = useRefresh();
-  const { stationId } = route.params;
+  
+  // Pobieramy zarówno stationId jak i stationName z parametrów nawigacji
+  const { stationId, stationName } = route.params;
+  
   const [station, setStation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,6 +39,13 @@ export default function StationDetails() {
 
   useEffect(() => {
     loadStationDetails();
+    
+    // Ustawiamy tytuł ekranu na nazwę stacji, jeśli jest dostępna
+    if (stationName) {
+      navigation.setOptions({
+        title: stationName
+      });
+    }
     
     // Add header right buttons
     navigation.setOptions({
@@ -54,7 +64,7 @@ export default function StationDetails() {
         </View>
       ),
     });
-  }, [navigation, isFavorited]);
+  }, [navigation, isFavorited, stationName]);
 
   // Efekt dla automatycznego odświeżania
   useEffect(() => {
@@ -80,6 +90,13 @@ export default function StationDetails() {
       
       const data = await fetchStationDetails(stationId);
       setStation(data);
+      
+      // Jeśli nie mieliśmy nazwy stacji z parametrów, ustawiamy ją teraz
+      if (data && data.name && !stationName) {
+        navigation.setOptions({
+          title: data.name
+        });
+      }
       
       if (!silent) {
         setLoading(false);
@@ -204,6 +221,29 @@ export default function StationDetails() {
           </View>
           
           <AlertsPanel station={station} theme={theme} />
+
+          {/* Dodajemy przycisk powrotu do mapy systemu rzeki */}
+          <View style={styles.actionButtonsContainer}>
+            {station && station.river && (
+              <>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={() => navigation.navigate('RiverFlow', { riverName: station.river })}
+                >
+                  <Ionicons name="git-network-outline" size={20} color="white" style={styles.actionButtonIcon} />
+                  <Text style={styles.actionButtonText}>Zobacz przepływ rzeki {station.river}</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: theme.colors.secondary }]}
+                  onPress={() => navigation.goBack()}
+                >
+                  <Ionicons name="map-outline" size={20} color="white" style={styles.actionButtonIcon} />
+                  <Text style={styles.actionButtonText}>Powrót do mapy</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </>
       ) : (
         <View style={styles.loadingContainer}>
@@ -212,18 +252,6 @@ export default function StationDetails() {
           </Text>
         </View>
       )}
-      
-      <View style={styles.actionButtonsContainer}>
-        {station && station.river && (
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
-            onPress={() => navigation.navigate('RiverFlow', { riverName: station.river })}
-          >
-            <Ionicons name="git-network-outline" size={20} color="white" style={styles.actionButtonIcon} />
-            <Text style={styles.actionButtonText}>Zobacz przepływ rzeki {station.river}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
     </ScrollView>
   );
 }
@@ -280,7 +308,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actionButtonsContainer: {
-    marginVertical: 16,
+    marginVertical:.16,
   },
   actionButton: {
     flexDirection: 'row',
