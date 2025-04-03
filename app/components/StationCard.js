@@ -4,186 +4,176 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
+// Funkcja do pobierania koloru statusu (zakładamy, że jest poprawna)
+const getStatusColor = (station, theme) => {
+  if (!station || !theme) return theme?.colors?.info || '#cccccc';
+  const isWarningUndefined = station.warningLevel === "nie określono" || station.warningLevel == null || station.warningLevel === 888;
+  const isAlarmUndefined = station.alarmLevel === "nie określono" || station.alarmLevel == null || station.alarmLevel === 999;
+
+  if (station.status === 'alarm' && isAlarmUndefined) return theme.colors.info;
+  if (station.status === 'warning' && isWarningUndefined) return theme.colors.info;
+
+  switch (station.status) {
+    case 'alarm': return theme.colors.danger;
+    case 'warning': return theme.colors.warning;
+    case 'normal': return theme.colors.safe;
+    default: return theme.colors.info;
+  }
+};
+
 export default function StationCard({ station, onPress }) {
   const { theme } = useTheme();
-  
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'alarm': return theme.colors.danger;
-      case 'warning': return theme.colors.warning;
-      case 'normal': return theme.colors.safe;
-      default: return theme.colors.info;
-    }
-  };
-  
-  const getTrendIcon = (trend) => {
-    switch (trend) {
-      case 'up': return 'arrow-up';
-      case 'down': return 'arrow-down';
-      default: return 'remove';
-    }
-  };
 
-  // Formatuj trend z odpowiednim znakiem
-  const formatTrend = (trendValue) => {
-    if (trendValue > 0) return `+${trendValue}`;
-    return trendValue.toString();
-  };
+  if (!station) {
+    return null;
+  }
 
-  // Formatuj opis trendu
-  const getTrendDescription = (trend) => {
-    switch (trend) {
-      case 'up': return ' (wzrost)';
-      case 'down': return ' (spadek)';
-      default: return ' (stabilny)';
+  // Funkcja formatująca tekst trendu (bez zmian)
+  const formatTrend = () => {
+    if (station.trend == null || station.trendValue == null) {
+      return "Brak danych";
     }
+    const sign = station.trendValue > 0 ? '+' : '';
+    const trendDesc = station.trend === 'stable' ? 'stabilny' : (station.trend === 'up' ? 'wzrost' : 'spadek');
+    const trendSymbol = station.trend === 'stable' ? '—' : (station.trend === 'up' ? '↑' : '↓');
+
+    // Zwracamy tekst bez koloru - kolor ustawiamy w stylu
+    return `${trendSymbol} ${sign}${station.trendValue} cm (${trendDesc})`;
   };
 
   return (
-    <TouchableOpacity 
-      onPress={onPress}
-      style={[styles.card, { backgroundColor: theme.colors.card }]}
-    >
-      <View style={styles.header}>
-        <Text style={[styles.stationName, { color: theme.colors.text }]}>
-          {station.name}
-        </Text>
-        <View 
-          style={[
-            styles.statusIndicator, 
-            { backgroundColor: getStatusColor(station.status) }
-          ]}
-        />
+    <TouchableOpacity onPress={onPress} style={[styles.card, { backgroundColor: theme.colors.card }]}>
+      {/* --- Górny wiersz: Nazwa i Status --- */}
+      <View style={styles.headerRow}>
+        <Text style={[styles.stationName, { color: theme.colors.text }]}>{station.name}</Text>
+        <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(station, theme) }]} />
       </View>
-      
-      <View style={styles.content}>
+
+      {/* --- Środkowy wiersz: Poziom (lewo) vs Trend/Aktualizacja (prawo) --- */}
+      <View style={styles.mainContentRow}>
+        {/* Lewa Kolumna: Poziom wody */}
         <View style={styles.levelContainer}>
           <Text style={[styles.levelValue, { color: theme.colors.text }]}>
-            {station.level}
+            {typeof station.level === 'number' ? station.level : '?'}
           </Text>
           <Text style={[styles.levelUnit, { color: theme.colors.text }]}>cm</Text>
         </View>
-        
+
+        {/* Prawa Kolumna: Trend i Aktualizacja */}
         <View style={styles.detailsContainer}>
-          <View style={styles.trendContainer}>
-            <Ionicons 
-              name={getTrendIcon(station.trend)} 
-              size={18} 
-              color={
-                station.trend === 'up' 
-                  ? theme.colors.danger 
-                  : station.trend === 'down' 
-                    ? theme.colors.safe 
-                    : theme.colors.text
-              } 
-            />
-            <Text 
-              style={[
-                styles.trendText, 
-                { 
-                  color: station.trend === 'up' 
-                    ? theme.colors.danger 
-                    : station.trend === 'down' 
-                      ? theme.colors.safe 
-                      : theme.colors.text
-                }
-              ]}
-            >
-              {formatTrend(station.trendValue)} cm{getTrendDescription(station.trend)}
-            </Text>
-          </View>
-          
-          <Text style={[styles.updateTime, { color: theme.dark ? '#AAA' : '#666' }]}>
-            Aktualizacja: {station.updateTime || 'nieznana'}
+          {/* --- MODYFIKACJA STYLU KOLORU TUTAJ --- */}
+          <Text style={[
+            styles.trendText,
+            { // Dynamiczny kolor na podstawie trendu
+              color: station.trend === 'up'
+                ? theme.colors.danger // Czerwony dla 'up'
+                : station.trend === 'down'
+                  ? theme.colors.safe   // Zielony dla 'down'
+                  : theme.colors.text // Domyślny dla 'stable' lub innych
+            }
+          ]}>
+            {formatTrend()}
+          </Text>
+          {/* ---------------------------------------- */}
+          <Text style={[styles.updateTimeText, { color: theme.dark ? '#AAA' : '#666' }]}>
+            Aktualizacja: {station.updateTime || '??:??'}
           </Text>
         </View>
       </View>
-      
-      <View style={styles.footer}>
+
+      {/* --- Dolny wiersz: Rzeka i Strzałka --- */}
+      <View style={styles.footerRow}>
         <View style={styles.riverContainer}>
           <Ionicons name="water-outline" size={14} color={theme.colors.primary} />
-          <Text style={[styles.riverName, { color: theme.dark ? '#AAA' : '#666' }]}>
+          <Text style={[styles.riverName, { color: theme.colors.text }]}>
             {station.river || 'Brak danych'}
           </Text>
         </View>
-        
         <Ionicons name="chevron-forward" size={20} color={theme.dark ? '#AAA' : '#666'} />
       </View>
     </TouchableOpacity>
   );
 }
 
+// Style (bez zmian w definicjach stylów)
 const styles = StyleSheet.create({
   card: {
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginHorizontal: 16,
+    marginVertical: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
     elevation: 2,
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
   stationName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
+    flexShrink: 1,
+    marginRight: 8,
   },
   statusIndicator: {
     width: 12,
     height: 12,
     borderRadius: 6,
   },
-  content: {
+  mainContentRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
   },
   levelContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginRight: 16,
+    alignItems: 'baseline',
   },
   levelValue: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
   },
   levelUnit: {
     fontSize: 16,
-    marginBottom: 4,
     marginLeft: 4,
+    fontWeight: '500',
   },
   detailsContainer: {
-    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    flexShrink: 1,
   },
-  trendContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  trendText: { // Podstawowe style dla tekstu trendu
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'right',
     marginBottom: 4,
   },
-  trendText: {
-    fontSize: 14,
-    marginLeft: 4,
-  },
-  updateTime: {
+  updateTimeText: {
     fontSize: 12,
+    textAlign: 'right',
   },
-  footer: {
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 8,
   },
   riverContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
+    marginRight: 8,
   },
   riverName: {
-    fontSize: 14,
-    marginLeft: 4,
+     marginLeft: 6,
+     fontSize: 14,
+     opacity: 0.8,
   },
 });

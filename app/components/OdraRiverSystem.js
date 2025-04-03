@@ -59,31 +59,31 @@ const OdraRiverSystem = ({ stations, theme }) => {
   const riverStations = {
     'Odra': [
       "Strona czeska", "Chałupki", "Olza", "Krzyżanowice", "Racibórz-Miedonia", 
-      "Koźle", "Krapkowice", "Opole-Groszowice", "UJŚCIE NYSY KŁODZKIEJ", 
-      "Brzeg", "Oława", "Trestno", "WROCŁAW ODRA", "Brzeg Dolny", 
+      "Koźle", "Krapkowice", "Opole-Groszowice", "Ujście Nysy Kłodzkiej", 
+      "Brzeg", "Oława", "Trestno", "Wrocław Odra", "Brzeg Dolny", 
       "Malczyce", "Ścinawa", "Głogów", "Nowa Sól", "Cigacice", 
-      "Nietków", "Połęcko", "Biała Góra", "Słubice", "Kostrzyn nad Odrą", 
-      "Gozdowice", "Bielinek", "Gryfino", "SZCZECIN MOST DŁUGI"
+      "Nietków", "Połęcko", "Biała Góra", "Słubice", "Kostrzyn n. Odrą", 
+      "Gozdowice", "Bielinek", "Gryfino", "Szczecin Most Długi"
     ],
     'Nysa Kłodzka': [
       "Nysa Kłodzka", "Bystrzyca Kłodzka", "Kłodzko", "Bardo", 
-      "Nysa", "Kopice", "Skorogoszcz", "UJŚCIE NYSY KŁODZKIEJ"
+      "Nysa", "Kopice", "Skorogoszcz", "Ujście Nysy Kłodzkiej"
     ],
     'Widawa': [
       "Widawa", "Zbytowa", "Krzyżanowice (Widawa)", 
-      "Wrocław (ujście Widawy)", "WROCŁAW ODRA"
+      "Wrocław (ujście Widawy)", "Wrocław Odra"
     ],
     'Oława': [
       "Oława (rzeka)", "Zborowice", "Oława (miejscowość)", 
-      "Wrocław (ujście Oławy)", "WROCŁAW ODRA"
+      "Wrocław (ujście Oławy)", "Wrocław Odra"
     ],
     'Ślęza': [
       "Ślęza", "Białobrzegie", "Borów", 
-      "Ślęza (miejscowość)", "WROCŁAW ODRA"
+      "Ślęza (miejscowość)", "Wrocław Odra"
     ],
     'Bystrzyca': [
       "Bystrzyca", "Krasków", "Mietków", 
-      "Jarnołtów", "WROCŁAW ODRA"
+      "Jarnołtów", "Wrocław Odra"
     ],
     'Bóbr': [
       "Bóbr", "Pilchowice", "Dąbrowa Bolesławiecka", 
@@ -116,24 +116,74 @@ const OdraRiverSystem = ({ stations, theme }) => {
   };
 
 const getStationByName = (name) => {
-  if (!stationData || Object.keys(stationData).length === 0) return null;
-
-  // Dokładne dopasowanie
-  if (stationData[name]) return stationData[name];
-
-  // Częściowe dopasowanie (ignoruje wielkość liter)
+  console.log("Próbuję pobrać stację:", name);
+  
+  // 1. Dokładne dopasowanie
+  if (stationData[name]) {
+    console.log("Znaleziono stację w stationData po nazwie:", name);
+    return stationData[name];
+  }
+  
+  // 2. Dokładne dopasowanie ignorujące wielkość liter
   const stationNames = Object.keys(stationData);
-  const match = stationNames.find(
+  const exactMatchIgnoreCase = stationNames.find(
+    (stationName) => stationName.toLowerCase() === name.toLowerCase()
+  );
+  
+  if (exactMatchIgnoreCase) {
+    console.log("Znaleziono stację przez dokładne dopasowanie ignorujące wielkość liter:", exactMatchIgnoreCase);
+    return stationData[exactMatchIgnoreCase];
+  }
+  
+  // 3. Częściowe dopasowanie (jeśli nazwa zawiera nazwę stacji lub odwrotnie)
+  const partialMatch = stationNames.find(
     (stationName) =>
       stationName.toLowerCase().includes(name.toLowerCase()) ||
       name.toLowerCase().includes(stationName.toLowerCase())
   );
-  return match ? stationData[match] : null;
+  
+  if (partialMatch) {
+    console.log("Znaleziono stację przez częściowe dopasowanie:", partialMatch);
+    return stationData[partialMatch];
+  }
+  
+  // 4. Dopasowanie po normalizacji nazw (bez spacji, myślników, itd.)
+  const normalizedName = name.toLowerCase().replace(/[-\s]/g, '');
+  const normalizedMatch = stationNames.find(stationName => {
+    const normalizedStationName = stationName.toLowerCase().replace(/[-\s]/g, '');
+    return normalizedStationName === normalizedName || 
+           normalizedStationName.includes(normalizedName) || 
+           normalizedName.includes(normalizedStationName);
+  });
+  
+  if (normalizedMatch) {
+    console.log("Znaleziono stację przez normalizację nazw:", normalizedMatch);
+    return stationData[normalizedMatch];
+  }
+  
+  // 5. Obsługa specjalnych przypadków
+  if (name === "UJŚCIE NYSY KŁODZKIEJ" || name === "Ujście Nysy Kłodzkiej") {
+    const alternativeNames = ["Ujście Nysy", "Nysa Kłodzka Ujście", "Nysa Kłodzka-Ujście"];
+    for (const altName of alternativeNames) {
+      const altMatch = stationNames.find(
+        (stationName) => stationName.includes(altName) || altName.includes(stationName)
+      );
+      if (altMatch) {
+        console.log("Znaleziono stację przez alternatywną nazwę:", altMatch);
+        return stationData[altMatch];
+      }
+    }
+  }
+  
+  console.log("Nie znaleziono stacji:", name);
+  return null;
 };
 
   // Funkcja zwracająca kolor dla statusu stacji
   const getStatusColor = (stationName) => {
+    console.log("Próbuję pobrać kolor dla stacji:", stationName);
     const station = getStationByName(stationName);
+    console.log("Znaleziona stacja:", station);
     if (!station) return theme.colors.info; // Domyślny kolor
     
     switch (station.status) {
@@ -456,5 +506,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   }
 });
+
+// Funkcja pomocnicza do logowania dostępnych stacji
+const logAvailableStations = () => {
+  console.log("=== DOSTĘPNE STACJE ===");
+  Object.keys(stationData).forEach(stationName => {
+    console.log(`- ${stationName} (ID: ${stationData[stationName].id})`);
+  });
+  console.log("======================");
+};
 
 export default React.memo(OdraRiverSystem);

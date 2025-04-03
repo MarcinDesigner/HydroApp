@@ -35,6 +35,36 @@ const RiverFlowView = ({ stations, riverName }) => {
     }
   };
   
+  useEffect(() => {
+  // Filtruj stacje dla wybranej rzeki i sortuj je
+  if (stations && stations.length > 0 && riverName) {
+    console.log(`Filtrowanie stacji dla rzeki: ${riverName}, liczba stacji: ${stations.length}`);
+    
+    // Najpierw dokładne dopasowanie
+    let riverStations = stations.filter(station => 
+      station.river && station.river.toLowerCase() === riverName.toLowerCase()
+    );
+    
+    // Jeśli nie znaleziono żadnych wyników, spróbuj częściowego dopasowania
+    if (riverStations.length === 0) {
+      riverStations = stations.filter(station => 
+        station.river && 
+        (station.river.toLowerCase().includes(riverName.toLowerCase()) || 
+         riverName.toLowerCase().includes(station.river.toLowerCase()))
+      );
+    }
+    
+    // Sortuj stacje według nazwy
+    const sortedStations = riverStations.sort((a, b) => a.name.localeCompare(b.name));
+    
+    console.log(`Znaleziono ${sortedStations.length} stacji dla rzeki ${riverName}`);
+    setFilteredStations(sortedStations);
+  } else {
+    console.log('Brak stacji lub nazwy rzeki');
+    setFilteredStations([]);
+  }
+}, [stations, riverName]);
+  
   // Funkcja pomocnicza do określania wypełnienia wskaźnika poziomu
   const getLevelPercentage = (station) => {
     // Jeśli nie mamy wartości stanu alarmowego/ostrzegawczego, używamy prostej skali

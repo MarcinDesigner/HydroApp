@@ -7,14 +7,14 @@ import hydroStations from '../constants/hydroLevels'; // Zaimportuj dane o stacj
 const mockMeasurements = {
   "Chałupki": 95,
   "Krzyżanowice": 111,
-  "Racibórz-Miedonia": null, // Brak danych
+  "Racibórz-Miedonia": 120,
   "Koźle": 285,
-  "Krapkowice": null,
+  "Krapkowice": 164,
   "Opole-Groszowice": null,
   "UJŚCIE NYSY KŁODZKIEJ": null,
   "Brzeg": null,
   "Oława": 164,
-  "Krapkowice": 164,
+  
   // ... dodaj więcej stacji
 };
 
