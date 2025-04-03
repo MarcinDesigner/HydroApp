@@ -1,220 +1,246 @@
 // Plik: app/screens/AlertsScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  FlatList, 
+  TouchableOpacity, 
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+  ScrollView
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useRefresh } from '../context/RefreshContext';
-import Loader from '../components/Loader';
-import { fetchAlerts, fetchMeteoWarnings } from '../api/stationsApi';
+import { fetchAreaWarnings } from '../api/stationsApi';
+
+// Lista województw w Polsce
+const REGIONS = [
+  'dolnośląskie', 'kujawsko-pomorskie', 'lubelskie', 'lubuskie', 'łódzkie',
+  'małopolskie', 'mazowieckie', 'opolskie', 'podkarpackie', 'podlaskie',
+  'pomorskie', 'śląskie', 'świętokrzyskie', 'warmińsko-mazurskie', 'wielkopolskie',
+  'zachodniopomorskie'
+];
 
 export default function AlertsScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const { isRefreshing, addListener, removeListener } = useRefresh();
+  
   const [alerts, setAlerts] = useState([]);
+  const [filteredAlerts, setFilteredAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
-
+  const [selectedRegion, setSelectedRegion] = useState(null); // null oznacza wszystkie regiony
+  
   useEffect(() => {
     loadAlerts();
-  }, []);
-
-  // Efekt dla automatycznego odświeżania
-  useEffect(() => {
-    // Rejestrujemy funkcję odświeżania w kontekście
-    const onRefreshCallback = () => {
-      loadAlerts(true); // true = cicha aktualizacja (bez wskaźnika ładowania)
-    };
-
+    
     // Dodaj listener dla globalnego refreshData
+    const onRefreshCallback = () => {
+      loadAlerts(true); // cicha aktualizacja
+    };
+    
     addListener(onRefreshCallback);
-
+    
     // Cleanup
     return () => {
       removeListener(onRefreshCallback);
     };
   }, []);
-
+  
+  useEffect(() => {
+    // Filtruj alerty po zmianie regionu lub alertów
+    if (selectedRegion) {
+      setFilteredAlerts(alerts.filter(alert => 
+        alert.regionId === selectedRegion || 
+        (alert.regionName && alert.regionName.toLowerCase().includes(selectedRegion.toLowerCase()))
+      ));
+    } else {
+      setFilteredAlerts(alerts);
+    }
+  }, [selectedRegion, alerts]);
+  
   const loadAlerts = async (silent = false) => {
     try {
       if (!silent) {
+        setLoading(true);
         setRefreshing(true);
       }
       
-      // Pobierz oba rodzaje alertów równolegle
-      const [hydroAlerts, meteoAlerts] = await Promise.all([
-        fetchAlerts(),
-        fetchMeteoWarnings()
-      ]);
+      // Pobierz wszystkie alerty
+      const data = await fetchAreaWarnings();
       
-      // Połącz alerty i posortuj wg daty (najnowsze na górze)
-      const allAlerts = [...hydroAlerts, ...meteoAlerts].sort((a, b) => {
-        // Zakładamy, że czas jest w formacie, który można porównywać stringowo
-        return b.time?.localeCompare(a.time || '') || 0;
-      });
+      // Mapowanie danych z API na format alertów używany w aplikacji
+      const mappedAlerts = data.map((warning, index) => ({
+        id: warning.uniqueId || `warning-${index}-${Date.now()}`,
+        stationId: warning.id_stacji,
+        stationName: warning.stacja || warning.nazwa_obszaru || 'Nieznana stacja',
+        title: warning.opis_zagrozenia || 'Ostrzeżenie hydrologiczne',
+        event: warning.zjawisko || warning.opis_zagrozenia || 'Alert hydrologiczny',
+        course: warning.przebieg || `Poziom: ${warning.stan || 'N/A'} cm`,
+        level: warning.stan ? parseInt(warning.stan) : 0,
+        threshold: warning.stan_ostrzegawczy ? parseInt(warning.stan_ostrzegawczy) : 0,
+        time: warning.waznosc_od ? `Od ${warning.waznosc_od} do ${warning.waznosc_do}` : new Date().toLocaleString(),
+        regionName: warning.regionName || warning.nazwa_obszaru || warning.wojewodztwo || 'Nieznany region',
+        regionId: warning.regionId || null
+      }));
       
-      setAlerts(allAlerts);
-      setError(null);
+      setAlerts(mappedAlerts);
       
       if (!silent) {
         setLoading(false);
         setRefreshing(false);
       }
     } catch (error) {
-      console.error('Błąd podczas ładowania alertów:', error);
-      setError(error.message || 'Nie udało się pobrać alertów.');
+      console.error('Error loading alerts:', error);
       if (!silent) {
         setLoading(false);
         setRefreshing(false);
       }
     }
   };
-
-  const handleAlertPress = (alert) => {
-    if (alert.stationId) {
-      navigation.navigate('StationDetails', { 
-        stationId: alert.stationId,
-        stationName: alert.stationName
-      });
+  
+  const onRefresh = () => {
+    loadAlerts();
+  };
+  
+  const showAlertDetails = (alert) => {
+    Alert.alert(
+      alert.title || 'Ostrzeżenie hydrologiczne',
+      `Zdarzenie: ${alert.event || 'Brak informacji'}\n\nPrzebieg: ${alert.course || 'Brak informacji'}\n\nRegion: ${alert.regionName || 'Nieznany'}\n\nCzas: ${alert.time || new Date().toLocaleString()}\n\nPoziom: ${alert.level || 'Nieznany'} cm\n\nPróg: ${alert.threshold || 'Nieznany'} cm`,
+      [{ text: 'OK' }]
+    );
+  };
+  
+  const navigateToStation = (stationId, stationName) => {
+    if (stationId) {
+      navigation.navigate('StationDetails', { stationId, stationName });
+    }
+  };
+  
+  const renderAlertItem = ({ item }) => (
+    <TouchableOpacity 
+      style={[
+        styles.alertItem, 
+        { 
+          backgroundColor: 
+            item.level > (item.threshold || 0) * 1.5 ? '#FF5252' : 
+            item.level > (item.threshold || 0) ? '#FFA726' : '#42A5F5'
+        }
+      ]}
+      onPress={() => showAlertDetails(item)}
+    >
+      <View style={styles.alertHeader}>
+        <Ionicons name="warning-outline" size={24} color="white" />
+        <Text style={styles.alertTitle}>
+          {item.title || `Ostrzeżenie: ${item.regionName || 'Obszar nieznany'}`}
+        </Text>
+      </View>
       
-      // Oznaczamy alert jako przeczytany
-      setAlerts(currentAlerts => 
-        currentAlerts.map(item => 
-          item.id === alert.id 
-            ? { ...item, isRead: true } 
-            : item
-        )
-      );
-    }
-  };
-
-  const getAlertIcon = (type) => {
-    switch (type) {
-      case 'alarm': return 'warning';
-      case 'warning': return 'alert-circle';
-      case 'info': return 'information-circle';
-      default: return 'ellipse';
-    }
-  };
-
-  const getAlertColor = (type) => {
-    switch (type) {
-      case 'alarm': return theme.colors.danger;
-      case 'warning': return theme.colors.warning;
-      case 'info': return theme.colors.info;
-      default: return theme.colors.text;
-    }
-  };
-
-  if (error) {
-    return (
-      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
-        <Ionicons 
-          name="cloud-offline-outline" 
-          size={64} 
-          color={theme.dark ? '#555' : '#CCC'} 
-        />
-        <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-          Błąd połączenia
+      <View style={styles.alertContent}>
+        <Text style={styles.alertText}>
+          Zdarzenie: {item.event || 'Brak informacji'}
         </Text>
-        <Text style={[styles.emptySubtitle, { color: theme.dark ? '#AAA' : '#666' }]}>
-          {error}
+        <Text style={styles.alertText} numberOfLines={2}>
+          Przebieg: {item.course || 'Brak informacji'}
         </Text>
-        <TouchableOpacity 
-          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
-          onPress={() => loadAlerts()}
-        >
-          <Text style={styles.retryText}>Spróbuj ponownie</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (loading && !refreshing) {
-    return <Loader message="Ładowanie alertów..." />;
-  }
-
-  if (alerts.length === 0) {
-    return (
-      <View style={[styles.emptyContainer, { backgroundColor: theme.colors.background }]}>
-        <Ionicons 
-          name="notifications-off-outline" 
-          size={64} 
-          color={theme.dark ? '#555' : '#CCC'} 
-        />
-        <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-          Brak alertów
+        <Text style={styles.alertText}>
+          Region: {item.regionName || 'Nieznany'}
         </Text>
-        <Text style={[styles.emptySubtitle, { color: theme.dark ? '#AAA' : '#666' }]}>
-          Aktualnie nie ma żadnych powiadomień o alertach hydrologicznych
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <FlatList
-        data={alerts}
-        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-        renderItem={({ item }) => (
+        {item.stationId && (
           <TouchableOpacity 
-            style={[
-              styles.alertItem, 
-              { 
-                backgroundColor: theme.colors.card,
-                borderLeftColor: getAlertColor(item.type)
-              },
-              item.isRead ? styles.readAlert : null
-            ]}
-            onPress={() => handleAlertPress(item)}
+            style={styles.stationButton}
+            onPress={() => navigateToStation(item.stationId, item.stationName)}
           >
-            <View style={styles.alertIconContainer}>
-              <Ionicons 
-                name={getAlertIcon(item.type)} 
-                size={24} 
-                color={getAlertColor(item.type)} 
-              />
-              {!item.isRead && (
-                <View style={styles.unreadIndicator} />
-              )}
-            </View>
-            
-            <View style={styles.alertContent}>
-              {item.title && (
-                <Text style={[styles.alertTitle, { color: theme.colors.text }]}>
-                  {item.title}
-                </Text>
-              )}
-              <Text style={[styles.stationName, { color: theme.colors.text }]}>
-                {item.stationName} {item.river ? `(${item.river})` : ''}
-              </Text>
-              <Text style={[styles.alertMessage, { color: theme.colors.text }]}>
-                {item.message}
-              </Text>
-              <Text style={[styles.alertTime, { color: theme.dark ? '#AAA' : '#666' }]}>
-                {item.time}
-              </Text>
-            </View>
-            
-            <Ionicons 
-              name="chevron-forward" 
-              size={24} 
-              color={theme.dark ? '#AAA' : '#666'} 
-            />
+            <Text style={styles.stationButtonText}>
+              Zobacz stację: {item.stationName}
+            </Text>
           </TouchableOpacity>
         )}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing || isRefreshing}
-            onRefresh={loadAlerts}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
+        <Text style={styles.alertTime}>
+          {item.time || new Date().toLocaleString()}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+  
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={styles.filterContainer}>
+        <Text style={[styles.filterTitle, { color: theme.colors.text }]}>
+          Filtruj według województwa:
+        </Text>
+        
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {['Wszystkie', ...REGIONS].map(item => (
+            <TouchableOpacity
+              key={item}
+              style={[
+                styles.regionButton,
+                selectedRegion === (item === 'Wszystkie' ? null : item) && 
+                  { backgroundColor: theme.colors.primary }
+              ]}
+              onPress={() => setSelectedRegion(item === 'Wszystkie' ? null : item)}
+            >
+              <Text
+                style={[
+                  styles.regionButtonText,
+                  selectedRegion === (item === 'Wszystkie' ? null : item) && 
+                    { color: 'white' }
+                ]}
+              >
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+      
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+            Ładowanie alertów...
+          </Text>
+        </View>
+      ) : filteredAlerts.length > 0 ? (
+        <FlatList
+          data={filteredAlerts}
+          renderItem={renderAlertItem}
+          keyExtractor={(item) => item.id || `alert-${Math.random()}`}
+          contentContainerStyle={styles.alertsList}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing || isRefreshing}
+              onRefresh={onRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+        />
+      ) : (
+        <View style={styles.noAlertsContainer}>
+          <Ionicons 
+            name="checkmark-circle-outline" 
+            size={64} 
+            color={theme.colors.primary} 
           />
-        }
-      />
+          <Text style={[styles.noAlertsText, { color: theme.colors.text }]}>
+            Brak aktualnych ostrzeżeń
+            {selectedRegion ? ` dla województwa ${selectedRegion}` : ''}
+          </Text>
+          <TouchableOpacity
+            style={[styles.refreshButton, { backgroundColor: theme.colors.primary }]}
+            onPress={onRefresh}
+          >
+            <Text style={styles.refreshButtonText}>Odśwież</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -223,82 +249,100 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  emptyContainer: {
+  filterContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  regionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    backgroundColor: '#EEEEEE',
+  },
+  regionButtonText: {
+    fontSize: 14,
+    color: '#555555',
+  },
+  alertsList: {
+    padding: 16,
+  },
+  alertItem: {
+    borderRadius: 8,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  alertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  alertTitle: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginLeft: 8,
+    flex: 1,
+  },
+  alertContent: {
+    padding: 12,
+  },
+  alertText: {
+    color: 'white',
+    marginBottom: 4,
+  },
+  stationButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    padding: 8,
+    borderRadius: 4,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  stationButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  alertTime: {
+    color: 'white',
+    fontSize: 12,
+    textAlign: 'right',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
   },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 22,
   },
-  alertItem: {
-    flexDirection: 'row',
+  noAlertsContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
-    marginVertical: 8,
-    marginHorizontal: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  readAlert: {
-    opacity: 0.7,
-  },
-  alertIconContainer: {
-    position: 'relative',
-    marginRight: 16,
-  },
-  unreadIndicator: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#2196F3',
-  },
-  alertContent: {
-    flex: 1,
-  },
-  alertTitle: {
+  noAlertsText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  stationName: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  alertMessage: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  alertTime: {
-    fontSize: 12,
-  },
-  retryButton: {
+    textAlign: 'center',
     marginTop: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    marginBottom: 24,
+  },
+  refreshButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 8,
   },
-  retryText: {
+  refreshButtonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
   },
 });

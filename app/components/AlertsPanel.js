@@ -1,166 +1,166 @@
 // Plik: app/components/AlertsPanel.js
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity,
+  ScrollView,
+  Alert
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { fetchAreaWarnings } from '../api/stationsApi';
 
-export default function AlertsPanel({ station, theme }) {
-  // Filtrujemy przestarzałe powiadomienia (starsze niż 30 dni)
-  const filterCurrentAlerts = (alerts) => {
-    if (!alerts) return [];
-    
-    const now = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(now.getDate() - 30);
-    
-    return alerts.filter(alert => {
-      // Jeśli alert nie ma daty lub data jest nieprawidłowa, pomijamy go
-      if (!alert.time) return false;
-      
-      // Sprawdzamy czy alert zawiera datę (można rozpoznać po formacie)
-      const hasDate = /\d{1,2}\.\d{1,2}\.\d{4}/.test(alert.time) || 
-                     /\d{4}-\d{1,2}-\d{1,2}/.test(alert.time);
-      
-      if (!hasDate) return true; // Jeśli nie ma daty, zachowujemy (nie mamy jak filtrować)
-      
-      try {
-        // Próbujemy wyłuskać datę z różnych formatów
-        let alertDate;
-        if (alert.time.includes('.')) {
-          // Format DD.MM.YYYY
-          const parts = alert.time.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-          if (parts) {
-            alertDate = new Date(parts[3], parts[2] - 1, parts[1]);
-          }
-        } else if (alert.time.includes('-')) {
-          // Format YYYY-MM-DD
-          alertDate = new Date(alert.time.split(' ')[0]);
-        }
-        
-        // Jeśli nie udało się sparsować daty, zachowujemy alert
-        if (!alertDate || isNaN(alertDate.getTime())) return true;
-        
-        // Filtrujemy alerty starsze niż 30 dni
-        return alertDate >= thirtyDaysAgo;
-      } catch (error) {
-        console.warn('Błąd parsowania daty alertu:', error);
-        return true; // W razie błędu, zachowujemy alert
-      }
-    });
-  };
-  
-  // Pobieramy aktualne alerty
-  const currentAlerts = filterCurrentAlerts(station.alerts);
-  
-  // Jeśli stacja ma dane o temperaturze wody, dodajemy aktualne powiadomienie
-  const generateCurrentWaterTempAlert = () => {
-    if (station.temperatureWater) {
-      const currentDate = new Date();
-      const dateString = `${currentDate.toLocaleDateString('pl-PL')} ${currentDate.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'})}`;
-      
-      return {
-        id: 'current-water-temp',
-        type: 'info',
-        message: `Temperatura wody: ${station.temperatureWater}°C`,
-        time: dateString,
-        stationName: station.name,
-        river: station.river,
-        isNew: true // Oznaczamy jako nowe powiadomienie
-      };
+export default function AlertsPanel({ station, theme, areaCode }) {
+  const [alerts, setAlerts] = useState([]);
+  const [areaAlerts, setAreaAlerts] = useState([]);
+  const [showAreaAlerts, setShowAreaAlerts] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Inicjalizacja alertów ze stacji, jeśli istnieją
+    if (station && station.alerts) {
+      setAlerts(station.alerts);
     }
-    return null;
-  };
-  
-  // Dodajemy bieżące powiadomienie o temperaturze wody
-  const waterTempAlert = generateCurrentWaterTempAlert();
-  const allAlerts = waterTempAlert 
-    ? [waterTempAlert, ...currentAlerts.filter(a => a.id !== 'current-water-temp')]
-    : currentAlerts;
+    
+    // Pobierz alerty dla obszaru, jeśli podano kod obszaru
+    if (areaCode) {
+      loadAreaAlerts(areaCode);
+    } else if (station && station.wojewodztwo) {
+      // Używamy województwa stacji jako domyślnego obszaru
+      loadAreaAlerts(station.wojewodztwo);
+    }
+  }, [station, areaCode]);
 
-  if (!allAlerts || allAlerts.length === 0) {
-    return (
-      <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
-          Powiadomienia
-        </Text>
-        <View style={styles.emptyContainer}>
-          <Ionicons 
-            name="notifications-off-outline" 
-            size={48} 
-            color={theme.dark ? '#555' : '#CCC'} 
-          />
-          <Text style={[styles.emptyText, { color: theme.dark ? '#AAA' : '#666' }]}>
-            Brak aktualnych powiadomień
-          </Text>
-        </View>
-      </View>
+  const loadAreaAlerts = async (area) => {
+    try {
+      setLoading(true);
+      const warnings = await fetchAreaWarnings(area);
+      
+      // Mapowanie danych z API na format alertów używany w aplikacji
+      const formattedWarnings = warnings.map((warning, index) => ({
+        id: warning.uniqueId || `area-warning-${index}-${Date.now()}`, // używamy unikalnego ID
+        title: warning.nazwa_obszaru || warning.opis_zagrozenia || 'Ostrzeżenie hydrologiczne',
+        event: warning.zjawisko || warning.opis_zagrozenia || 'Przekroczenie stanu ostrzegawczego',
+        course: warning.przebieg || `Aktualny poziom: ${warning.stan} cm`,
+        level: warning.stan ? parseInt(warning.stan) : undefined,
+        threshold: warning.stan_ostrzegawczy ? parseInt(warning.stan_ostrzegawczy) : undefined,
+        time: warning.waznosc_od ? `Od ${warning.waznosc_od} do ${warning.waznosc_do}` : new Date().toLocaleString(),
+        regionName: warning.regionName || warning.nazwa_obszaru || area
+      }));
+      
+      setAreaAlerts(formattedWarnings);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading area alerts:', error);
+      setLoading(false);
+      // W przypadku błędu, ustawmy puste alerty
+      setAreaAlerts([]);
+    }
+  };
+
+  const toggleAreaAlerts = () => {
+    setShowAreaAlerts(!showAreaAlerts);
+  };
+
+  const showAlertDetails = (alert) => {
+    Alert.alert(
+      alert.title || 'Ostrzeżenie',
+      `Zdarzenie: ${alert.event || 'Brak informacji'}\n\nPrzebieg: ${alert.course || 'Brak informacji'}\n\nCzas: ${alert.time || 'Nieznany'}\n\nPoziom: ${alert.level || 'Nieznany'} cm\n\nPróg: ${alert.threshold || 'Nieznany'} cm`,
+      [{ text: 'OK' }]
     );
+  };
+
+  const renderAlertItem = ({ item }) => (
+    <TouchableOpacity 
+      style={[
+        styles.alertItem, 
+        { 
+          backgroundColor: 
+            item.level > (item.threshold || 0) * 1.5 ? '#FF5252' : 
+            item.level > (item.threshold || 0) ? '#FFA726' : '#42A5F5'
+        }
+      ]}
+      onPress={() => showAlertDetails(item)}
+    >
+      <View style={styles.alertHeader}>
+        <Ionicons name="warning-outline" size={24} color="white" />
+        <Text style={styles.alertTitle}>{item.title || `Ostrzeżenie hydrologiczne`}</Text>
+      </View>
+      <View style={styles.alertContent}>
+        <Text style={styles.alertText}>
+          Zdarzenie: {item.event || 'Przekroczenie stanu ostrzegawczego'}
+        </Text>
+        <Text style={styles.alertText} numberOfLines={2}>
+          Przebieg: {item.course || `Aktualny poziom: ${item.level} cm (próg: ${item.threshold} cm)`}
+        </Text>
+        <Text style={styles.alertTime}>
+          {item.time || new Date().toLocaleString()}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  // Jeśli nie ma żadnych alertów, nie wyświetlamy panelu
+  if ((!alerts || alerts.length === 0) && (!areaAlerts || areaAlerts.length === 0)) {
+    return null;
   }
-
-  const getAlertIcon = (type) => {
-    switch (type) {
-      case 'alarm': return 'warning';
-      case 'warning': return 'alert-circle';
-      case 'info': return 'information-circle';
-      default: return 'ellipse';
-    }
-  };
-
-  const getAlertColor = (type) => {
-    switch (type) {
-      case 'alarm': return theme.colors.danger;
-      case 'warning': return theme.colors.warning;
-      case 'info': return theme.colors.info;
-      default: return theme.colors.text;
-    }
-  };
 
   return (
     <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
-          Powiadomienia
-        </Text>
-        {allAlerts.length > 0 && (
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>{allAlerts.length}</Text>
-          </View>
-        )}
-      </View>
-      
-      {allAlerts.map(alert => (
-        <View
-          key={alert.id}
-          style={[
-            styles.alertItem,
-            { borderBottomColor: theme.dark ? '#333' : '#EEE' },
-            alert.isNew && styles.newAlert
-          ]}
-        >
-          <Ionicons 
-            name={getAlertIcon(alert.type)} 
-            size={24} 
-            color={getAlertColor(alert.type)} 
-            style={styles.alertIcon}
-          />
-          <View style={styles.alertContent}>
-            <Text style={[styles.alertMessage, { color: theme.colors.text }]}>
-              {alert.message}
-              {alert.isNew && <Text style={styles.newBadge}> • Nowe</Text>}
-            </Text>
-            <Text style={[styles.alertTime, { color: theme.dark ? '#AAA' : '#666' }]}>
-              {alert.time}
-            </Text>
-          </View>
+      <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+        Alerty i ostrzeżenia
+      </Text>
+
+      {alerts && alerts.length > 0 ? (
+        <View style={styles.alertsList}>
+          {alerts.map((item, index) => (
+            <View key={`station-alert-${index}`}>
+              {renderAlertItem({ item })}
+            </View>
+          ))}
         </View>
-      ))}
-      
-      {allAlerts.length > 1 && (
-        <TouchableOpacity style={styles.showAllButton}>
-          <Text style={[styles.showAllText, { color: theme.colors.primary }]}>
-            Pokaż wszystkie powiadomienia
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />
-        </TouchableOpacity>
+      ) : (
+        <Text style={[styles.noAlertsText, { color: theme.colors.text }]}>
+          Brak aktualnych alertów dla tej stacji
+        </Text>
+      )}
+
+      {/* Sekcja alertów dla obszaru */}
+      <TouchableOpacity
+        style={[styles.areaAlertButton, { backgroundColor: theme.colors.primary }]}
+        onPress={toggleAreaAlerts}
+      >
+        <Text style={styles.areaAlertButtonText}>
+          {showAreaAlerts ? 'Ukryj alerty obszaru' : 'Pokaż alerty dla obszaru'}
+        </Text>
+        <Ionicons
+          name={showAreaAlerts ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color="white"
+        />
+      </TouchableOpacity>
+
+      {showAreaAlerts && (
+        <>
+          {loading ? (
+            <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+              Ładowanie alertów...
+            </Text>
+          ) : areaAlerts && areaAlerts.length > 0 ? (
+            <View style={styles.alertsList}>
+              {areaAlerts.map((item, index) => (
+                <View key={`area-alert-${index}`}>
+                  {renderAlertItem({ item })}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={[styles.noAlertsText, { color: theme.colors.text }]}>
+              Brak alertów dla wybranego obszaru
+            </Text>
+          )}
+        </>
       )}
     </View>
   );
@@ -177,70 +177,65 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 12,
   },
-  countBadge: {
-    backgroundColor: '#2196F3',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  countText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-  },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 16,
+  alertsList: {
+    marginBottom: 8,
   },
   alertItem: {
+    borderRadius: 8,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  alertHeader: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
-  newAlert: {
-    backgroundColor: 'rgba(33, 150, 243, 0.05)',
-  },
-  alertIcon: {
-    marginRight: 12,
-  },
-  alertContent: {
+  alertTitle: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginLeft: 8,
     flex: 1,
   },
-  alertMessage: {
-    fontSize: 16,
+  alertContent: {
+    padding: 12,
+  },
+  alertText: {
+    color: 'white',
     marginBottom: 4,
   },
-  newBadge: {
-    color: '#2196F3',
-    fontWeight: 'bold',
-  },
   alertTime: {
+    color: 'white',
     fontSize: 12,
+    textAlign: 'right',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
-  showAllButton: {
+  noAlertsText: {
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  loadingText: {
+    textAlign: 'center',
+    marginVertical: 12,
+  },
+  areaAlertButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
-    padding: 8,
+    padding: 10,
+    borderRadius: 8,
+    marginVertical: 8,
   },
-  showAllText: {
-    fontSize: 14,
-    marginRight: 4,
+  areaAlertButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginRight: 8,
   },
 });

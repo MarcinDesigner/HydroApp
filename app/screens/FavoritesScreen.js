@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useRefresh } from '../context/RefreshContext';
 import StationCard from '../components/StationCard';
+import WaterConditionInfo from '../components/WaterConditionInfo';
 import Loader from '../components/Loader';
 import { fetchStations } from '../api/stationsApi';
 
@@ -25,15 +26,12 @@ export default function FavoritesScreen() {
 
   // Efekt dla automatycznego odświeżania
   useEffect(() => {
-    // Rejestrujemy funkcję odświeżania w kontekście
     const onRefreshCallback = () => {
       loadFavorites(true); // true = cicha aktualizacja (bez wskaźnika ładowania)
     };
 
-    // Dodaj listener dla globalnego refreshData
     addListener(onRefreshCallback);
 
-    // Cleanup
     return () => {
       removeListener(onRefreshCallback);
     };
@@ -103,6 +101,19 @@ export default function FavoritesScreen() {
       <FlatList
         data={favoriteStations}
         keyExtractor={(item) => item.id.toString()}
+        ListHeaderComponent={() => (
+          favoriteStations.length > 0 ? (
+            <>
+              {favoriteStations.map((station) => (
+                <WaterConditionInfo 
+                  key={`water-condition-${station.id}`}
+                  level={station.level} 
+                  theme={theme} 
+                />
+              ))}
+            </>
+          ) : null
+        )}
         renderItem={({ item }) => (
           <StationCard
             station={item}

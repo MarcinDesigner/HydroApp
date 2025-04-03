@@ -21,6 +21,14 @@ import StationInfo from '../components/StationInfo';
 import AlertsPanel from '../components/AlertsPanel';
 import { fetchStationDetails } from '../api/stationsApi';
 
+// Lista województw w Polsce
+const REGIONS = [
+  'dolnośląskie', 'kujawsko-pomorskie', 'lubelskie', 'lubuskie', 'łódzkie',
+  'małopolskie', 'mazowieckie', 'opolskie', 'podkarpackie', 'podlaskie',
+  'pomorskie', 'śląskie', 'świętokrzyskie', 'warmińsko-mazurskie', 'wielkopolskie',
+  'zachodniopomorskie'
+];
+
 export default function StationDetails() {
   const route = useRoute();
   const navigation = useNavigation();
@@ -33,6 +41,7 @@ export default function StationDetails() {
   
   const [station, setStation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedArea, setSelectedArea] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [timeRange, setTimeRange] = useState('7d'); // '24h', '7d', '30d'
   const isFavorited = isFavorite(stationId);
@@ -219,21 +228,46 @@ export default function StationDetails() {
               />
             )}
           </View>
+
+          <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+              Wybierz obszar alertów
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.areaSelector}>
+                {REGIONS.map(region => (
+                  <TouchableOpacity
+                    key={region}
+                    style={[
+                      styles.areaSelectorItem,
+                      selectedArea === region && { backgroundColor: theme.colors.primary }
+                    ]}
+                    onPress={() => setSelectedArea(region)}
+                  >
+                    <Text 
+                      style={[
+                        styles.areaSelectorText,
+                        selectedArea === region && { color: 'white' }
+                      ]}
+                    >
+                      {region}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
           
-          <AlertsPanel station={station} theme={theme} />
+          <AlertsPanel 
+            station={station} 
+            theme={theme} 
+            areaCode={selectedArea || (station && station.wojewodztwo)} 
+          />
 
           {/* Dodajemy przycisk powrotu do mapy systemu rzeki */}
           <View style={styles.actionButtonsContainer}>
             {station && station.river && (
               <>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={() => navigation.navigate('RiverFlow', { riverName: station.river })}
-                >
-                  <Ionicons name="git-network-outline" size={20} color="white" style={styles.actionButtonIcon} />
-                  <Text style={styles.actionButtonText}>Zobacz przepływ rzeki {station.river}</Text>
-                </TouchableOpacity>
-                
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: theme.colors.secondary }]}
                   onPress={() => navigation.goBack()}
@@ -308,7 +342,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actionButtonsContainer: {
-    marginVertical:.16,
+    marginVertical: 16,
   },
   actionButton: {
     flexDirection: 'row',
@@ -325,5 +359,21 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
-  }
+  },
+  areaSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  areaSelectorItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    margin: 4,
+    backgroundColor: '#EEEEEE',
+  },
+  areaSelectorText: {
+    fontSize: 12,
+    color: '#555555',
+  },
 });

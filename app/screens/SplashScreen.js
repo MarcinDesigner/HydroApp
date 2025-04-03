@@ -41,15 +41,7 @@ export default function SplashScreen() {
             <Text style={styles.slogan}>Aplikacja Przeciwpowodziowa</Text>
           </View>
           
-          <TouchableOpacity 
-            style={[styles.button, { backgroundColor: theme.colors.primary }]}
-            onPress={handleContinue}
-          >
-            <Text style={styles.buttonText}>Przejdź dalej</Text>
-            <Ionicons name="arrow-forward" size={20} color="white" style={styles.buttonIcon} />
-          </TouchableOpacity>
-          
-          <View style={styles.infoContainer}>
+<View style={styles.infoContainer}>
             <Text style={styles.infoText}>
               Monitoruj stany rzek w czasie rzeczywistym
             </Text>
@@ -60,6 +52,16 @@ export default function SplashScreen() {
               Dane dostarczane przez IMGW-PIB hydro.imgw.pl
             </Text>
           </View>
+          
+          <TouchableOpacity 
+            style={[styles.button, { backgroundColor: theme.colors.primary }]}
+            onPress={handleContinue}
+          >
+            <Text style={styles.buttonText}>Przejdź dalej</Text>
+            <Ionicons name="arrow-forward" size={20} color="white" style={styles.buttonIcon} />
+          </TouchableOpacity>
+          
+          
         </View>
       </ImageBackground>
     </View>

@@ -37,6 +37,8 @@ const SettingRow = ({ icon, title, subtitle, control, onPress }) => {
   );
 };
 
+
+
 // Karta grupująca ustawienia
 const SettingsCard = ({ children }) => {
     const { theme } = useTheme();

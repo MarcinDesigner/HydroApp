@@ -58,24 +58,21 @@ export default function HomeScreen() {
     }
   }, [isRefreshing]);
 
-  useEffect(() => {
-    loadStations();
-  }, [loadStations]);
+useEffect(() => {
+  loadStations();
+}, [loadStations]);
 
-  useEffect(() => {
-   navigation.setOptions({
-      headerRight: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => navigation.navigate('RiverFlow')} style={{ marginRight: 20 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="git-network-outline" size={25} color={theme.colors.headerText || 'white'} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ marginRight: 16 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="settings-outline" size={24} color={theme.colors.headerText || 'white'} />
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [navigation, theme]);
+useEffect(() => {
+  navigation.setOptions({
+    headerRight: () => (
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ marginRight: 16 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="settings-outline" size={24} color={theme.colors.headerText || 'white'} />
+        </TouchableOpacity>
+      </View>
+    ),
+  });
+}, [navigation, theme]);
 
   useEffect(() => {
     const onRefreshCallback = () => { if (!isRefreshing && !loading) loadStations(true); };

@@ -19,6 +19,49 @@ console.log("==== API DATA ====");
 console.log("API URL:", API_HYDRO_URL);
 // Pobieranie listy wszystkich stacji
 
+export const fetchAreaWarnings = async (areaCode) => {
+  try {
+    const response = await fetch('https://danepubliczne.imgw.pl/api/data/warningshydro');
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Dodaj unikalne identyfikatory do ostrzeżeń i aktualny timestamp
+    const uniqueWarnings = data.map((warning, index) => ({
+      ...warning,
+      uniqueId: `warning-${index}-${Date.now()}`, // dodajemy unikalny identyfikator
+      timestamp: warning.timestamp || new Date().toISOString() // używamy istniejącego timestampa lub dodajemy nowy
+    }));
+    
+    // Usuwamy duplikaty na podstawie treści ostrzeżenia
+    const dedupedWarnings = uniqueWarnings.filter((warning, index, self) => 
+      index === self.findIndex((w) => (
+        w.opis_zagrozenia === warning.opis_zagrozenia && 
+        w.rzeka === warning.rzeka &&
+        w.regionName === warning.regionName
+      ))
+    );
+    
+    // Jeśli podano kod obszaru, filtrujemy ostrzeżenia dla tego obszaru
+    if (areaCode) {
+      return dedupedWarnings.filter(warning => 
+        warning.regionId === areaCode || 
+        (warning.regionName && warning.regionName.toLowerCase().includes(areaCode.toLowerCase())) ||
+        (warning.województwo && warning.województwo.toLowerCase().includes(areaCode.toLowerCase()))
+      );
+    }
+    
+    // W przeciwnym razie zwracamy wszystkie ostrzeżenia bez duplikatów
+    return dedupedWarnings;
+  } catch (error) {
+    console.error('Error fetching area warnings:', error);
+    throw error;
+  }
+};
+
 export const fetchStations = async () => {
   try {
     const response = await fetch(API_HYDRO_URL);
