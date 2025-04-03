@@ -7,7 +7,8 @@ import {
   ImageBackground, 
   TouchableOpacity, 
   StatusBar, 
-  Dimensions 
+  Dimensions,
+  Image  
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +19,7 @@ const { width, height } = Dimensions.get('window');
 export default function SplashScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
-  
+
   const handleContinue = () => {
     navigation.reset({
       index: 0,
