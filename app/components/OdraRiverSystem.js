@@ -59,7 +59,7 @@ const OdraRiverSystem = ({ stations, theme }) => {
   const riverStations = {
     'Odra': [
       "Strona czeska", "Chałupki", "Olza", "Krzyżanowice", "Racibórz-Miedonia", 
-      "Koźle", "Krapkowice", "Opole-Groszowice", "Ujście Nysy Kłodzkiej", 
+      "Koźle", "Krapkowice", "Opole Groszowice", "Ujście Nysy Kłodzkiej", 
       "Brzeg", "Oława", "Trestno", "Wrocław Odra", "Brzeg Dolny", 
       "Malczyce", "Ścinawa", "Głogów", "Nowa Sól", "Cigacice", 
       "Nietków", "Połęcko", "Biała Góra", "Słubice", "Kostrzyn n. Odrą", 
@@ -115,8 +115,27 @@ const OdraRiverSystem = ({ stations, theme }) => {
     );
   };
 
+// POPRAWIONA FUNKCJA getStationByName
 const getStationByName = (name) => {
+  if (!name) return null;
   console.log("Próbuję pobrać stację:", name);
+  
+  // Mapa specjalnych przypadków dla stacji, które mogą być błędnie interpretowane
+  const specialCases = {
+    "Brzeg": "Brzeg", // Zapewnia, że "Brzeg" zawsze dopasuje do "Brzeg", a nie "Kołobrzeg"
+    "Kołobrzeg": "Kołobrzeg",
+    "Ujście Nysy Kłodzkiej": "Ujście Nysy Kłodzkiej",
+    "Biała Góra": "Biała Góra"
+  };
+  
+  // Sprawdź czy mamy specjalny przypadek
+  if (specialCases[name]) {
+    const specialCaseName = specialCases[name];
+    if (stationData[specialCaseName]) {
+      console.log("Znaleziono stację przez specjalny przypadek:", specialCaseName);
+      return stationData[specialCaseName];
+    }
+  }
   
   // 1. Dokładne dopasowanie
   if (stationData[name]) {
@@ -135,33 +154,64 @@ const getStationByName = (name) => {
     return stationData[exactMatchIgnoreCase];
   }
   
-  // 3. Częściowe dopasowanie (jeśli nazwa zawiera nazwę stacji lub odwrotnie)
-  const partialMatch = stationNames.find(
+  // 3. Pełne słowo - ważne dla rozróżnienia "Brzeg" vs "Kołobrzeg"
+  const fullWordMatch = stationNames.find(stationName => {
+    const words = stationName.toLowerCase().split(/\s+/);
+    return words.includes(name.toLowerCase());
+  });
+  
+  if (fullWordMatch) {
+    console.log("Znaleziono stację przez dopasowanie pełnego słowa:", fullWordMatch);
+    return stationData[fullWordMatch];
+  }
+  
+  // 4. Częściowe dopasowanie (tylko jeśli nie ma konfliktu z nazwami podobnymi)
+  // Tworzymy listę potencjalnych dopasowań
+  const partialMatches = stationNames.filter(
     (stationName) =>
       stationName.toLowerCase().includes(name.toLowerCase()) ||
       name.toLowerCase().includes(stationName.toLowerCase())
   );
   
-  if (partialMatch) {
-    console.log("Znaleziono stację przez częściowe dopasowanie:", partialMatch);
-    return stationData[partialMatch];
+  // Jeśli mamy dokładnie jedno dopasowanie
+  if (partialMatches.length === 1) {
+    console.log("Znaleziono stację przez częściowe dopasowanie:", partialMatches[0]);
+    return stationData[partialMatches[0]];
+  }
+  // Jeśli mamy więcej dopasowań, preferujemy te, które zaczynają się od szukanej nazwy
+  else if (partialMatches.length > 1) {
+    const priorityMatch = partialMatches.find(stationName => 
+      stationName.toLowerCase().startsWith(name.toLowerCase())
+    );
+    
+    if (priorityMatch) {
+      console.log("Znaleziono stację przez priorytetowe dopasowanie:", priorityMatch);
+      return stationData[priorityMatch];
+    }
+    
+    // Jeśli nadal mamy wiele dopasowań, preferujemy krótsze nazwy (często bardziej specyficzne)
+    partialMatches.sort((a, b) => a.length - b.length);
+    console.log("Znaleziono stację przez najkrótsze częściowe dopasowanie:", partialMatches[0]);
+    return stationData[partialMatches[0]];
   }
   
-  // 4. Dopasowanie po normalizacji nazw (bez spacji, myślników, itd.)
+  // 5. Dopasowanie po normalizacji nazw (bez spacji, myślników, itd.)
   const normalizedName = name.toLowerCase().replace(/[-\s]/g, '');
-  const normalizedMatch = stationNames.find(stationName => {
+  const normalizedMatches = stationNames.filter(stationName => {
     const normalizedStationName = stationName.toLowerCase().replace(/[-\s]/g, '');
     return normalizedStationName === normalizedName || 
            normalizedStationName.includes(normalizedName) || 
            normalizedName.includes(normalizedStationName);
   });
   
-  if (normalizedMatch) {
-    console.log("Znaleziono stację przez normalizację nazw:", normalizedMatch);
-    return stationData[normalizedMatch];
+  // Podobnie jak wyżej, jeśli mamy wiele dopasowań, preferujemy krótsze nazwy
+  if (normalizedMatches.length > 0) {
+    normalizedMatches.sort((a, b) => a.length - b.length);
+    console.log("Znaleziono stację przez normalizację nazw:", normalizedMatches[0]);
+    return stationData[normalizedMatches[0]];
   }
   
-  // 5. Obsługa specjalnych przypadków
+  // 6. Obsługa specjalnych przypadków
   if (name === "UJŚCIE NYSY KŁODZKIEJ" || name === "Ujście Nysy Kłodzkiej") {
     const alternativeNames = ["Ujście Nysy", "Nysa Kłodzka Ujście", "Nysa Kłodzka-Ujście"];
     for (const altName of alternativeNames) {

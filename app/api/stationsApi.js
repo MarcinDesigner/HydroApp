@@ -1,5 +1,5 @@
 // Plik: app/api/stationsApi.js
-// Połączenie z API hydrologicznym IMGW
+// Połączenie z API hydrologicznym IMGW z dodatkową funkcją pobierania danych dla problematycznych stacji
 
 import { findStationLevels, findStationLevelsById, determineStationStatus } from '../constants/hydroLevels';
 import { HYDRO_STATION_COORDINATES } from '../services/stationCoordinatesService';
@@ -8,11 +8,96 @@ const API_HYDRO_URL = 'https://danepubliczne.imgw.pl/api/data/hydro';
 const API_WARNINGS_HYDRO_URL = 'https://danepubliczne.imgw.pl/api/data/warningshydro';
 const API_WARNINGS_METEO_URL = 'https://danepubliczne.imgw.pl/api/data/warningsmeteo';
 const API_SYNOP_URL = 'https://danepubliczne.imgw.pl/api/data/synop';
+const API_IMGW_CHARTS = 'https://hydro.imgw.pl/api/chart/';
 
-// Twardokodowane poziomy dla stacji z problemami z API
+// Twardokodowane poziomy dla stacji z problemami z API (tylko jako fallback)
 const HARDCODED_STATION_LEVELS = {
   "151160170": { level: 110 }, // Brzeg Dolny
-  // Możesz dodać więcej problematycznych stacji ID: wartość
+  "152140060": { level: 150 }, // Kostrzyn Nad Odrą
+  "152140090": { level: 90 },  // Biała Góra
+  "151150030": { level: 120 }, // Iłowa
+  "152160130": { level: 80 },  // Mosin
+  "150170290": { level: 190 }, // Opole-Groszowice
+  "150170130": { level: 180 }, // Ujście Nysy Kłodzkiej
+};
+
+// Lista stacji, dla których próbujemy pobrać dane przez alternatywne API
+const STATIONS_TO_SCRAPE = [
+  "150170290", // Opole-Groszowice
+  "152140060", // Kostrzyn Nad Odrą
+  "152140090", // Biała Góra
+  "151150030", // Iłowa
+  "152160130", // Mosin
+  "150170130", // Ujście Nysy Kłodzkiej
+];
+
+// Funkcja do bezpośredniego pobierania danych z API wykresów IMGW
+const fetchStationLevelFromIMGWApi = async (stationId) => {
+  try {
+    console.log(`Próba pobrania danych z API wykresów IMGW dla stacji ${stationId}`);
+    
+    // Pobierz dane z API wykresów IMGW (oficjalne API, które używa strona hydro.imgw.pl)
+    // Endpoint zwraca dane używane do generowania wykresów na stronie (ostatnie 48h)
+    const url = `${API_IMGW_CHARTS}${stationId}/1d`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Błąd HTTP przy pobieraniu z API wykresów: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    // Sprawdź czy otrzymaliśmy jakiekolwiek dane
+    if (data && Array.isArray(data.data) && data.data.length > 0) {
+      // Pobierz ostatni (najbardziej aktualny) odczyt
+      const latestReading = data.data[data.data.length - 1];
+      
+      // W API może być kilka serii - najczęściej ostatnia zawiera poziom wody
+      if (latestReading && Array.isArray(latestReading) && latestReading.length > 0) {
+        // Ostatnia wartość to zazwyczaj poziom wody w cm
+        const waterLevel = latestReading[latestReading.length - 1];
+        
+        if (typeof waterLevel === 'number' && waterLevel > 0) {
+          console.log(`Znaleziono poziom wody ${waterLevel} cm dla stacji ${stationId} w API wykresów IMGW`);
+          return { level: Math.round(waterLevel) };
+        }
+      }
+    }
+    
+    console.log(`Nie znaleziono danych poziomu wody dla stacji ${stationId} w API wykresów IMGW`);
+    return null;
+  } catch (error) {
+    console.error(`Błąd podczas pobierania danych z API wykresów IMGW dla stacji ${stationId}:`, error);
+    return null;
+  }
+};
+
+// Funkcja próbująca pobrać dane dla stacji z różnych źródeł
+const getStationLevel = async (station) => {
+  let levelValue = parseFloat(station.stan_wody) || 0;
+  
+  // Jeśli poziom z API jest nieprawidłowy (0 lub null) i stacja znajduje się na liście do scrapowania
+  if ((levelValue === 0 || levelValue === null) && STATIONS_TO_SCRAPE.includes(station.id_stacji)) {
+    console.log(`Stacja ${station.stacja} (${station.id_stacji}) wymaga alternatywnego źródła danych.`);
+    
+    // 1. Najpierw próbujemy użyć API wykresów IMGW
+    const chartApiData = await fetchStationLevelFromIMGWApi(station.id_stacji);
+    
+    if (chartApiData && chartApiData.level) {
+      console.log(`Użyto danych z API wykresów IMGW dla stacji ${station.stacja}: ${chartApiData.level} cm`);
+      return chartApiData.level;
+    }
+    
+    // 2. Jeśli to się nie powiodło, sprawdź czy mamy twardokodowaną wartość
+    if (HARDCODED_STATION_LEVELS[station.id_stacji]) {
+      console.log(`Użyto twardokodowanej wartości dla stacji ${station.stacja}: ${HARDCODED_STATION_LEVELS[station.id_stacji].level} cm`);
+      return HARDCODED_STATION_LEVELS[station.id_stacji].level;
+    }
+  }
+  
+  // Jeśli poziom jest prawidłowy lub nie mamy alternatywnych źródeł, zwróć oryginalną wartość
+  return levelValue;
 };
 
 console.log("==== API DATA ====");
@@ -71,7 +156,9 @@ export const fetchStations = async () => {
 
     const data = await response.json();
 
-    return data.map(station => {
+    const processedStations = [];
+    
+    for (const station of data) {
       // --- Obliczenia updateTime, level, status, warningLevel, alarmLevel, coordinates ---
       const stationMeasurementDate = station.stan_wody_data_pomiaru ?
                              new Date(station.stan_wody_data_pomiaru) : new Date();
@@ -83,18 +170,18 @@ export const fetchStations = async () => {
       const stationLevels = findStationLevelsById(station.id_stacji);
       const warningLevel = stationLevels ? stationLevels.warningLevel : 888;
       const alarmLevel = stationLevels ? stationLevels.alarmLevel : 999;
-      let levelValue = parseFloat(station.stan_wody) || 0;
-      if (levelValue === 0 && HARDCODED_STATION_LEVELS[station.id_stacji]) {
-        levelValue = HARDCODED_STATION_LEVELS[station.id_stacji].level;
-      }
+      
+      // Pobierz poziom wody uwzględniając alternatywne źródła danych
+      const levelValue = await getStationLevel(station);
+      
       const status = determineStationStatus(levelValue, warningLevel, alarmLevel);
       const stationCoordinates = HYDRO_STATION_COORDINATES[station.stacja] || { latitude: 52.0, longitude: 19.0 };
 
       // --- NOWE: Obliczanie danych trendu ---
-      const chartData = generateChartDataForStation(station); // Wywołaj funkcję obliczającą
+      const chartData = generateChartDataForStation(station, levelValue); // Przekazujemy obliczony poziom wody
 
       // --- Zwracany obiekt z poprawnym trendem ---
-      return {
+      processedStations.push({
         id: station.id_stacji,
         name: station.stacja,
         level: levelValue,
@@ -119,8 +206,10 @@ export const fetchStations = async () => {
         icePhenomenonDate: station.zjawisko_lodowe_data_pomiaru,
         overgrowthPhenomenon: station.zjawisko_zarastania,
         overgrowthPhenomenonDate: station.zjawisko_zarastania_data_pomiaru
-      };
-    });
+      });
+    }
+
+    return processedStations;
   } catch (error) {
     console.error('Błąd podczas pobierania stacji:', error);
     throw error;
@@ -203,14 +292,8 @@ export const fetchStationDetails = async (stationId) => {
     const warningLevel = stationLevels ? stationLevels.warningLevel : 888; // domyślna wartość, jeśli nie znaleziono
     const alarmLevel = stationLevels ? stationLevels.alarmLevel : 999; // domyślna wartość, jeśli nie znaleziono
 
-    // Pobierz obecny poziom wody
-    let levelValue = parseFloat(station.stan_wody) || 0;
-
-    // Sprawdź, czy mamy twardokodowaną wartość dla tej stacji
-    if (levelValue === 0 && HARDCODED_STATION_LEVELS[station.id_stacji]) {
-      console.log(`Używam twardokodowanej wartości dla stacji ${station.stacja} (ID: ${station.id_stacji})`);
-      levelValue = HARDCODED_STATION_LEVELS[station.id_stacji].level;
-    }
+    // Pobierz obecny poziom wody uwzględniając alternatywne źródła danych
+    const levelValue = await getStationLevel(station);
 
     // Określ status stacji na podstawie poziomów
     const status = determineStationStatus(levelValue, warningLevel, alarmLevel);
@@ -343,7 +426,7 @@ export const fetchStationDetails = async (stationId) => {
     }
 
     // Obliczamy dane dla wykresów i trend
-    const chartData = generateChartDataForStation(station);
+    const chartData = generateChartDataForStation(station, levelValue);
     const trend = chartData.trend;
     const trendValue = chartData.trendValue;
 
@@ -444,22 +527,16 @@ export const fetchAlerts = async () => {
     console.log("[fetchAlerts] Przetwarzanie danych: stacje hydro =", hydroData.length, ", ostrzeżenia hydro =", warningsData.length, ", ostrzeżenia meteo =", meteoWarningsData.length);
 
     // Dodaj informacje o aktualnych stanach wody
-    hydroData.forEach((station, index) => {
+    for (const station of hydroData) {
       // Pobierz poziomy dla tej stacji ze stałych danych
       const stationLevels = findStationLevels(station.stacja);
-      if (!stationLevels) return; // Jeśli nie ma danych o poziomach, pomiń
+      if (!stationLevels) continue; // Jeśli nie ma danych o poziomach, pomiń
 
       const warningLevel = stationLevels.warningLevel;
       const alarmLevel = stationLevels.alarmLevel;
 
-      // Pobierz obecny poziom wody
-      let levelValue = parseFloat(station.stan_wody) || 0;
-
-      // Sprawdź, czy mamy twardokodowaną wartość dla tej stacji
-      if (levelValue === 0 && HARDCODED_STATION_LEVELS[station.id_stacji]) {
-        // console.log(`[fetchAlerts] Używam twardokodowanej wartości dla stacji ${station.stacja} (ID: ${station.id_stacji})`); // Można odkomentować w razie potrzeby
-        levelValue = HARDCODED_STATION_LEVELS[station.id_stacji].level;
-      }
+      // Pobierz obecny poziom wody z uwzględnieniem alternatywnych źródeł
+      const levelValue = await getStationLevel(station);
 
       // Określ status stacji na podstawie poziomów
       const status = determineStationStatus(levelValue, warningLevel, alarmLevel);
@@ -467,7 +544,7 @@ export const fetchAlerts = async () => {
       // Dodaj alert tylko dla stacji w stanie ostrzegawczym lub alarmowym
       if (status === 'alarm') {
         alerts.push({
-          id: `level-alarm-${index}`,
+          id: `level-alarm-${station.id_stacji}`,
           stationId: station.id_stacji,
           stationName: station.stacja,
           river: station.rzeka || 'Brak danych',
@@ -480,7 +557,7 @@ export const fetchAlerts = async () => {
         });
       } else if (status === 'warning') {
         alerts.push({
-          id: `level-warning-${index}`,
+          id: `level-warning-${station.id_stacji}`,
           stationId: station.id_stacji,
           stationName: station.stacja,
           river: station.rzeka || 'Brak danych',
@@ -492,7 +569,7 @@ export const fetchAlerts = async () => {
           isRead: false
         });
       }
-    });
+    }
 
     // Dodaj ostrzeżenia hydrologiczne z API, tylko aktualne
     warningsData.forEach((warning, index) => {
@@ -503,6 +580,8 @@ export const fetchAlerts = async () => {
           (warning.rzeka && station.rzeka && warning.rzeka.includes(station.rzeka)) ||
           (warning.obszar && station.województwo && warning.obszar.includes(station.województwo))
         );
+
+       // Dokończenie części fetchAlerts funkcji
 
         alerts.push({
           id: `api-warning-${index}`,
@@ -533,7 +612,7 @@ export const fetchAlerts = async () => {
             message: warning.tresc || 'Ostrzeżenie o suszy',
             time: formatWarningDate(warning.obowiazuje_od, warning.obowiazuje_do),
             area: getAreaNames(warning.teryt) || '',
-            wojewodztwo: '', // Brak informacji o województwie
+            wojewodztwo: '',
             prawdopodobienstwo: warning.prawdopodobienstwo ? `${warning.prawdopodobienstwo}%` : '',
             isRead: false
           });
@@ -714,11 +793,11 @@ const getRegionCode = (wojewodztwo) => {
 };
 
 // Generowanie deterministycznych danych wykresu na podstawie aktualnego poziomu i obliczenie trendu
-const generateChartDataForStation = (station) => {
-  const currentLevel = parseFloat(station.stan_wody) || 100;
+const generateChartDataForStation = (station, currentLevel = null) => {
+  const stationLevel = currentLevel !== null ? currentLevel : (parseFloat(station.stan_wody) || 100);
   const stationId = parseInt(station.id_stacji) || 1;
 
- // Funkcja pomocnicza do generowania deterministycznej wartości
+  // Funkcja pomocnicza do generowania deterministycznej wartości
   // na podstawie ID stacji, indeksu punktu i zakresu czasu
   const getDeterministicValue = (stationId, index, range) => {
     // Używamy ID stacji jako ziarna dla generatora
@@ -734,7 +813,7 @@ const generateChartDataForStation = (station) => {
     // Mnożymy przez seed, aby każda stacja miała inny wzór
     const variation = Math.round(Math.sin(seed * 0.1 + index * 0.7) * amplitude);
 
-    return Math.max(0, Math.round(currentLevel + variation));
+    return Math.max(0, Math.round(stationLevel + variation));
   };
 
   // Generowanie danych dla wykresu 24h (co 4 godziny)

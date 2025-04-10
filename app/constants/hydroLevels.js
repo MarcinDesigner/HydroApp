@@ -1162,7 +1162,7 @@ export const findStationLevels = (stationIdentifier, voivodeship = null, riverNa
     if (station) return station;
   }
   
-  if (stationIdentifier === "Opole-Groszowice" || stationIdentifier === "Opole Groszowice") {
+  if (stationIdentifier === "Opole-Groszowice" || stationIdentifier === "Opole-Groszowice") {
     const station = HYDRO_LEVELS.find(s => s.id === 150170290);
     if (station) return station;
   }
@@ -1172,7 +1172,7 @@ export const findStationLevels = (stationIdentifier, voivodeship = null, riverNa
     if (station) return station;
   }
   
-  if (stationIdentifier === "SZCZECIN MOST DŁUGI" || stationIdentifier === "Szczecin Most Długi" || stationIdentifier === "Szczecin") {
+  if (stationIdentifier === "Szczecin Most Długi" || stationIdentifier === "Szczecin Most Długi" || stationIdentifier === "Szczecin") {
     const station = HYDRO_LEVELS.find(s => s.id === 153140051 || s.id === 153140050);
     if (station) return station;
   }
