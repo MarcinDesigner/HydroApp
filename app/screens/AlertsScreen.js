@@ -9,13 +9,16 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
-  ScrollView
+  ScrollView,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useRefresh } from '../context/RefreshContext';
 import { fetchAreaWarnings } from '../api/stationsApi';
+import CustomAlertManager from '../components/CustomAlertManager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Lista województw w Polsce
 const REGIONS = [
@@ -35,6 +38,26 @@ export default function AlertsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState(null); // null oznacza wszystkie regiony
+  const [expandedAlertId, setExpandedAlertId] = useState(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  
+  // Animacje
+  const [fadeAnims] = useState(() => Array(20).fill(0).map(() => new Animated.Value(0)));
+  
+  // Sprawdź, czy powiadomienia są włączone
+  useEffect(() => {
+    const checkNotificationsEnabled = async () => {
+      try {
+        const setting = await AsyncStorage.getItem('notifications_enabled');
+        setNotificationsEnabled(setting === null || setting === 'true');
+      } catch (error) {
+        console.error('Błąd podczas sprawdzania ustawień powiadomień:', error);
+        setNotificationsEnabled(true); // Domyślnie włączone
+      }
+    };
+    
+    checkNotificationsEnabled();
+  }, []);
   
   useEffect(() => {
     loadAlerts();
@@ -62,6 +85,18 @@ export default function AlertsScreen() {
     } else {
       setFilteredAlerts(alerts);
     }
+    
+    // Animuj pojawienie się nowych alertów
+    fadeAnims.forEach((anim, index) => {
+      if (index < alerts.length) {
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 500,
+          delay: index * 100,
+          useNativeDriver: true
+        }).start();
+      }
+    });
   }, [selectedRegion, alerts]);
   
   const loadAlerts = async (silent = false) => {
@@ -86,7 +121,14 @@ export default function AlertsScreen() {
         threshold: warning.stan_ostrzegawczy ? parseInt(warning.stan_ostrzegawczy) : 0,
         time: warning.waznosc_od ? `Od ${warning.waznosc_od} do ${warning.waznosc_do}` : new Date().toLocaleString(),
         regionName: warning.regionName || warning.nazwa_obszaru || warning.wojewodztwo || 'Nieznany region',
-        regionId: warning.regionId || null
+        regionId: warning.regionId || null,
+        severity: warning.stopien_zagrozenia 
+                ? parseInt(warning.stopien_zagrozenia) 
+                : warning.stan > (warning.stan_ostrzegawczy || 0) * 1.5 ? 3 
+                : warning.stan > (warning.stan_ostrzegawczy || 0) ? 2 
+                : 1,
+        type: warning.stan > (warning.stan_ostrzegawczy || 0) * 1.5 ? 'alarm' : 
+              warning.stan > (warning.stan_ostrzegawczy || 0) ? 'warning' : 'info'
       }));
       
       setAlerts(mappedAlerts);
@@ -102,6 +144,11 @@ export default function AlertsScreen() {
         setRefreshing(false);
       }
     }
+  };
+  
+  // Funkcja zmiany regionu
+  const changeRegion = (region) => {
+    setSelectedRegion(region);
   };
   
   const onRefresh = () => {
@@ -122,54 +169,145 @@ export default function AlertsScreen() {
     }
   };
   
-  const renderAlertItem = ({ item }) => (
-    <TouchableOpacity 
-      style={[
-        styles.alertItem, 
-        { 
-          backgroundColor: 
-            item.level > (item.threshold || 0) * 1.5 ? '#FF5252' : 
-            item.level > (item.threshold || 0) ? '#FFA726' : '#42A5F5'
-        }
-      ]}
-      onPress={() => showAlertDetails(item)}
-    >
-      <View style={styles.alertHeader}>
-        <Ionicons name="warning-outline" size={24} color="white" />
-        <Text style={styles.alertTitle}>
-          {item.title || `Ostrzeżenie: ${item.regionName || 'Obszar nieznany'}`}
-        </Text>
-      </View>
-      
-      <View style={styles.alertContent}>
-        <Text style={styles.alertText}>
-          Zdarzenie: {item.event || 'Brak informacji'}
-        </Text>
-        <Text style={styles.alertText} numberOfLines={2}>
-          Przebieg: {item.course || 'Brak informacji'}
-        </Text>
-        <Text style={styles.alertText}>
-          Region: {item.regionName || 'Nieznany'}
-        </Text>
-        {item.stationId && (
-          <TouchableOpacity 
-            style={styles.stationButton}
-            onPress={() => navigateToStation(item.stationId, item.stationName)}
-          >
-            <Text style={styles.stationButtonText}>
-              Zobacz stację: {item.stationName}
+  // Przełącza rozwinięcie/zwinięcie alertu
+  const toggleAlertExpansion = (alertId) => {
+    setExpandedAlertId(expandedAlertId === alertId ? null : alertId);
+  };
+  
+  // Określa kolor alertu na podstawie typu
+  const getAlertColor = (alert) => {
+    switch (alert.type) {
+      case 'alarm': return theme.colors.danger;
+      case 'warning': return theme.colors.warning;
+      case 'info': default: return theme.colors.info;
+    }
+  };
+  
+  const renderAlertItem = ({ item, index }) => {
+    const isExpanded = expandedAlertId === item.id;
+    const alertColor = getAlertColor(item);
+    
+    return (
+      <Animated.View style={{ opacity: fadeAnims[index] || 1 }}>
+        <TouchableOpacity 
+          style={[
+            styles.alertItem, 
+            { 
+              backgroundColor: theme.dark ? '#2c3e50' : 'white',
+              borderLeftColor: alertColor,
+              borderLeftWidth: 4
+            }
+          ]}
+          onPress={() => toggleAlertExpansion(item.id)}
+        >
+          <View style={styles.alertHeader}>
+            <Ionicons 
+              name={item.type === 'alarm' ? 'warning' : item.type === 'warning' ? 'alert-circle' : 'information-circle-outline'} 
+              size={24} 
+              color={alertColor} 
+            />
+            <Text style={[styles.alertTitle, { color: theme.colors.text }]}>
+              {item.title || `Ostrzeżenie: ${item.regionName || 'Obszar nieznany'}`}
             </Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.alertTime}>
-          {item.time || new Date().toLocaleString()}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+            <Ionicons
+              name={isExpanded ? "chevron-up" : "chevron-down"}
+              size={20}
+              color={theme.dark ? '#aaa' : '#666'}
+            />
+          </View>
+          
+          {isExpanded ? (
+            <View style={styles.alertContent}>
+              <View style={styles.alertDetailRow}>
+                <Ionicons name="flash-outline" size={16} color={theme.dark ? '#aaa' : '#666'} />
+                <Text style={styles.alertDetailLabel}>Zdarzenie:</Text>
+                <Text style={[styles.alertDetailText, { color: theme.colors.text }]}>
+                  {item.event || 'Brak informacji'}
+                </Text>
+              </View>
+              
+              <View style={styles.alertDetailRow}>
+                <Ionicons name="document-text-outline" size={16} color={theme.dark ? '#aaa' : '#666'} />
+                <Text style={styles.alertDetailLabel}>Przebieg:</Text>
+                <Text style={[styles.alertDetailText, { color: theme.colors.text }]} numberOfLines={3}>
+                  {item.course || 'Brak informacji'}
+                </Text>
+              </View>
+              
+              <View style={styles.alertDetailRow}>
+                <Ionicons name="location-outline" size={16} color={theme.dark ? '#aaa' : '#666'} />
+                <Text style={styles.alertDetailLabel}>Region:</Text>
+                <Text style={[styles.alertDetailText, { color: theme.colors.text }]}>
+                  {item.regionName || 'Nieznany'}
+                </Text>
+              </View>
+              
+              <View style={styles.alertDetailRow}>
+                <Ionicons name="time-outline" size={16} color={theme.dark ? '#aaa' : '#666'} />
+                <Text style={styles.alertDetailLabel}>Czas:</Text>
+                <Text style={[styles.alertDetailText, { color: theme.colors.text }]}>
+                  {item.time || new Date().toLocaleString()}
+                </Text>
+              </View>
+              
+              {item.stationId && (
+                <TouchableOpacity 
+                  style={[styles.stationButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={() => navigateToStation(item.stationId, item.stationName)}
+                >
+                  <Ionicons name="navigate" size={16} color="white" style={styles.buttonIcon} />
+                  <Text style={styles.stationButtonText}>
+                    Zobacz stację: {item.stationName}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity 
+                style={[styles.detailsButton, { backgroundColor: theme.colors.secondary || '#009688' }]}
+                onPress={() => showAlertDetails(item)}
+              >
+                <Ionicons name="information-circle-outline" size={16} color="white" style={styles.buttonIcon} />
+                <Text style={styles.detailsButtonText}>
+                  Więcej szczegółów
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.alertSummary}>
+              <View style={styles.alertSummaryContent}>
+                <Text style={[styles.alertEvent, { color: theme.colors.text }]} numberOfLines={1}>
+                  {item.event || 'Brak informacji'}
+                </Text>
+                <Text style={styles.alertTime}>
+                  {item.time || new Date().toLocaleString()}
+                </Text>
+              </View>
+              <View style={[styles.severityBadge, { backgroundColor: alertColor }]}>
+                <Text style={styles.severityText}>
+                  {item.type === 'alarm' ? 'ALARM' : item.type === 'warning' ? 'OSTRZEŻENIE' : 'INFO'}
+                </Text>
+              </View>
+            </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
   
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Manager alertów - pokazuje alerty jako wyskakujące powiadomienia */}
+      {notificationsEnabled && (
+        <CustomAlertManager 
+          alerts={filteredAlerts.slice(0, 3).map(alert => ({
+            ...alert,
+            message: alert.event,
+            description: alert.course
+          }))} 
+          onPress={(alert) => navigateToStation(alert.stationId, alert.stationName)}
+        />
+      )}
+      
       <View style={styles.filterContainer}>
         <Text style={[styles.filterTitle, { color: theme.colors.text }]}>
           Filtruj według województwa:
@@ -184,7 +322,7 @@ export default function AlertsScreen() {
                 selectedRegion === (item === 'Wszystkie' ? null : item) && 
                   { backgroundColor: theme.colors.primary }
               ]}
-              onPress={() => setSelectedRegion(item === 'Wszystkie' ? null : item)}
+              onPress={() => changeRegion(item === 'Wszystkie' ? null : item)}
             >
               <Text
                 style={[
@@ -274,46 +412,105 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   alertItem: {
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: 16,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   alertHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    padding: 16,
   },
   alertTitle: {
-    color: 'white',
     fontWeight: 'bold',
-    marginLeft: 8,
+    marginLeft: 10,
     flex: 1,
+    fontSize: 16,
   },
-  alertContent: {
-    padding: 12,
+  alertSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 0,
   },
-  alertText: {
-    color: 'white',
+  alertSummaryContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  alertEvent: {
+    fontSize: 14,
     marginBottom: 4,
   },
-  stationButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    padding: 8,
+  alertTime: {
+    fontSize: 12,
+    color: '#888',
+    fontStyle: 'italic',
+  },
+  alertContent: {
+    padding: 16,
+    paddingTop: 0,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  alertDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  alertDetailLabel: {
+    marginLeft: 6,
+    marginRight: 4,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#888',
+  },
+  alertDetailText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  severityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 4,
-    marginTop: 8,
+  },
+  severityText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  stationButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    marginBottom: 8,
   },
   stationButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },
-  alertTime: {
+  detailsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    borderRadius: 8,
+  },
+  detailsButtonText: {
     color: 'white',
-    fontSize: 12,
-    textAlign: 'right',
-    fontStyle: 'italic',
-    marginTop: 8,
+    fontWeight: 'bold',
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   loadingContainer: {
     flex: 1,

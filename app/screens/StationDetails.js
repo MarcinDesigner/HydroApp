@@ -7,27 +7,18 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Share
+  Share,
+  Animated
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart } from 'react-native-chart-kit';
-import { Dimensions } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useRefresh } from '../context/RefreshContext';
 import Loader from '../components/Loader';
 import StationInfo from '../components/StationInfo';
-import AlertsPanel from '../components/AlertsPanel';
+import StationCharts from '../components/StationCharts';
 import { fetchStationDetails } from '../api/stationsApi';
-
-// Lista województw w Polsce
-const REGIONS = [
-  'dolnośląskie', 'kujawsko-pomorskie', 'lubelskie', 'lubuskie', 'łódzkie',
-  'małopolskie', 'mazowieckie', 'opolskie', 'podkarpackie', 'podlaskie',
-  'pomorskie', 'śląskie', 'świętokrzyskie', 'warmińsko-mazurskie', 'wielkopolskie',
-  'zachodniopomorskie'
-];
 
 export default function StationDetails() {
   const route = useRoute();
@@ -41,10 +32,11 @@ export default function StationDetails() {
   
   const [station, setStation] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedArea, setSelectedArea] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [timeRange, setTimeRange] = useState('7d'); // '24h', '7d', '30d'
   const isFavorited = isFavorite(stationId);
+  
+  // Animacje
+  const favoriteScale = new Animated.Value(1);
 
   useEffect(() => {
     loadStationDetails();
@@ -60,12 +52,36 @@ export default function StationDetails() {
     navigation.setOptions({
       headerRight: () => (
         <View style={styles.headerButtons}>
-          <TouchableOpacity onPress={() => toggleFavorite(stationId)} style={styles.headerButton}>
-            <Ionicons 
-              name={isFavorited ? 'heart' : 'heart-outline'} 
-              size={24} 
-              color="white" 
-            />
+          <TouchableOpacity 
+            onPress={() => {
+              // Animacja przycisku ulubionych
+              Animated.sequence([
+                Animated.timing(favoriteScale, {
+                  toValue: 1.3,
+                  duration: 150,
+                  useNativeDriver: true
+                }),
+                Animated.timing(favoriteScale, {
+                  toValue: 1,
+                  duration: 150,
+                  useNativeDriver: true
+                })
+              ]).start();
+              
+              // Przełącz stan ulubionych
+              toggleFavorite(stationId);
+            }} 
+            style={styles.headerButton}
+          >
+            <Animated.View style={{
+              transform: [{ scale: favoriteScale }]
+            }}>
+              <Ionicons 
+                name={isFavorited ? 'heart' : 'heart-outline'} 
+                size={24} 
+                color="white" 
+              />
+            </Animated.View>
           </TouchableOpacity>
           <TouchableOpacity onPress={shareStation} style={styles.headerButton}>
             <Ionicons name="share-outline" size={24} color="white" />
@@ -157,123 +173,27 @@ export default function StationDetails() {
         <>
           <StationInfo station={station} theme={theme} />
           
-          <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
-              Poziom wody w czasie
-            </Text>
-            
-            <View style={styles.timeRangeContainer}>
-              {['24h', '7d', '30d'].map(range => (
-                <TouchableOpacity
-                  key={range}
-                  style={[
-                    styles.timeRangeButton,
-                    timeRange === range && { backgroundColor: theme.colors.primary }
-                  ]}
-                  onPress={() => setTimeRange(range)}
-                >
-                  <Text 
-                    style={[
-                      styles.timeRangeText,
-                      timeRange === range && { color: 'white' }
-                    ]}
-                  >
-                    {range === '24h' ? '24 godz.' : range === '7d' ? '7 dni' : '30 dni'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            
-            {station.chartData && station.chartData[timeRange] && (
-              <LineChart
-                data={{
-                  labels: station.chartData[timeRange].labels,
-                  datasets: [
-                    {
-                      data: station.chartData[timeRange].values,
-                      color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-                      strokeWidth: 2
-                    }
-                  ]
-                }}
-                width={Dimensions.get('window').width - 64}
-                height={220}
-                chartConfig={{
-                  backgroundColor: theme.colors.card,
-                  backgroundGradientFrom: theme.colors.card,
-                  backgroundGradientTo: theme.colors.card,
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => 
-                    theme.dark 
-                      ? `rgba(255, 255, 255, ${opacity})` 
-                      : `rgba(0, 0, 0, ${opacity})`,
-                  labelColor: (opacity = 1) => 
-                    theme.dark 
-                      ? `rgba(255, 255, 255, ${opacity})` 
-                      : `rgba(0, 0, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16
-                  },
-                  propsForDots: {
-                    r: "4",
-                    strokeWidth: "2",
-                    stroke: theme.colors.primary
-                  }
-                }}
-                bezier
-                style={{
-                  marginVertical: 8,
-                  borderRadius: 16
-                }}
-              />
-            )}
-          </View>
+          {/* Wykresy stacji */}
+          <StationCharts station={station} theme={theme} />
 
-          <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
-              Wybierz obszar alertów
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.areaSelector}>
-                {REGIONS.map(region => (
-                  <TouchableOpacity
-                    key={region}
-                    style={[
-                      styles.areaSelectorItem,
-                      selectedArea === region && { backgroundColor: theme.colors.primary }
-                    ]}
-                    onPress={() => setSelectedArea(region)}
-                  >
-                    <Text 
-                      style={[
-                        styles.areaSelectorText,
-                        selectedArea === region && { color: 'white' }
-                      ]}
-                    >
-                      {region}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
-          
-          <AlertsPanel 
-            station={station} 
-            theme={theme} 
-            areaCode={selectedArea || (station && station.wojewodztwo)} 
-          />
-
-          {/* Dodajemy przycisk powrotu do mapy systemu rzeki */}
+          {/* Przyciski akcji */}
           <View style={styles.actionButtonsContainer}>
             {station && station.river && (
               <>
                 <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: theme.colors.secondary }]}
+                  style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
                   onPress={() => navigation.goBack()}
                 >
+                  <Ionicons name="arrow-back" size={20} color="white" style={styles.actionButtonIcon} />
+                  <Text style={styles.actionButtonText}>Powrót</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: theme.colors.secondary || '#009688' }]}
+                  onPress={() => navigation.navigate('Map', { highlightStationId: station.id })}
+                >
                   <Ionicons name="map-outline" size={20} color="white" style={styles.actionButtonIcon} />
-                  <Text style={styles.actionButtonText}>Powrót do mapy</Text>
+                  <Text style={styles.actionButtonText}>Pokaż na mapie</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -302,7 +222,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   card: {
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
@@ -316,21 +236,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
   },
-  timeRangeContainer: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  timeRangeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    backgroundColor: '#EEEEEE',
-  },
-  timeRangeText: {
-    fontSize: 14,
-    color: '#555555',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -342,6 +247,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginVertical: 16,
   },
   actionButton: {
@@ -350,7 +257,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 12,
     borderRadius: 8,
-    marginBottom: 8,
+    flex: 0.48,
   },
   actionButtonIcon: {
     marginRight: 8,
@@ -359,21 +266,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
-  },
-  areaSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 8,
-  },
-  areaSelectorItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    margin: 4,
-    backgroundColor: '#EEEEEE',
-  },
-  areaSelectorText: {
-    fontSize: 12,
-    color: '#555555',
-  },
+  }
 });

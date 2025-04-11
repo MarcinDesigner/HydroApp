@@ -1,388 +1,367 @@
 // Plik: app/components/CustomAlertManager.js
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  TextInput, 
-  Modal,
-  Alert,
-  ScrollView
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
+  Platform,
+  Vibration
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAlerts } from '../context/AlertsContext';
-import { sendLocalNotification } from '../services/notificationService';
+import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CustomAlertManager = ({ stationId, stationName, currentLevel, theme }) => {
-  const { 
-    getAlertsForStation, 
-    addAlert, 
-    removeAlert, 
-    checkThresholdExceeded 
-  } = useAlerts();
-  
-  const [modalVisible, setModalVisible] = useState(false);
-  const [threshold, setThreshold] = useState('');
-  const [operation, setOperation] = useState('above'); // 'above' lub 'below'
-  const [stationAlerts, setStationAlerts] = useState([]);
-  
-  // Ładowanie alertów dla tej stacji
+const { width } = Dimensions.get('window');
+
+/**
+ * Komponent zarządzający wyświetlaniem alertów w aplikacji
+ * @param {Object} props - Właściwości komponentu
+ * @param {Array} props.alerts - Lista alertów do wyświetlenia
+ * @param {Function} props.onDismiss - Funkcja wywoływana po zamknięciu alertu
+ * @param {Function} props.onPress - Funkcja wywoływana po kliknięciu alertu
+ * @param {boolean} props.autoHide - Czy alert ma się automatycznie ukrywać
+ * @param {number} props.duration - Czas wyświetlania alertu w ms (domyślnie 5000)
+ */
+const CustomAlertManager = ({ 
+  alerts = [], 
+  onDismiss, 
+  onPress, 
+  autoHide = true, 
+  duration = 5000 
+}) => {
+  const { theme } = useTheme();
+  const navigation = useNavigation();
+  const [currentAlertIndex, setCurrentAlertIndex] = useState(0);
+  const [visibleAlert, setVisibleAlert] = useState(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const translateY = useRef(new Animated.Value(-200)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const hideTimeout = useRef(null);
+
+  // Sprawdź, czy powiadomienia są włączone
   useEffect(() => {
-    if (stationId) {
-      setStationAlerts(getAlertsForStation(stationId));
-    }
-  }, [stationId, getAlertsForStation]);
-  
-  // Funkcja dodająca nowy alert
-  const handleAddAlert = () => {
-    const thresholdValue = parseInt(threshold);
+    const checkNotificationsEnabled = async () => {
+      try {
+        const setting = await AsyncStorage.getItem('notifications_enabled');
+        setNotificationsEnabled(setting === null || setting === 'true');
+      } catch (error) {
+        console.error('Błąd podczas sprawdzania ustawień powiadomień:', error);
+        setNotificationsEnabled(true); // Domyślnie włączone
+      }
+    };
     
-    if (isNaN(thresholdValue) || thresholdValue <= 0) {
-      Alert.alert('Błąd', 'Podaj prawidłowy próg alertu (wartość większa od 0)');
+    checkNotificationsEnabled();
+  }, []);
+
+  // Efekt, który zarządza wyświetlaniem alertów
+  useEffect(() => {
+    // Nie pokazuj alertów, jeśli są wyłączone w ustawieniach
+    if (!notificationsEnabled) {
       return;
     }
     
-    const newAlert = {
-      stationId,
-      stationName,
-      threshold: thresholdValue,
-      operation,
-      type: 'custom',
-      message: `Poziom wody ${operation === 'above' ? 'powyżej' : 'poniżej'} ${thresholdValue} cm`
-    };
-    
-    const success = addAlert(newAlert);
-    
-    if (success) {
-      setStationAlerts(getAlertsForStation(stationId));
-      setModalVisible(false);
-      setThreshold('');
+    // Jeśli mamy alerty i nie wyświetlamy żadnego, pokaż kolejny
+    if (alerts.length > 0 && !visibleAlert) {
+      // Znajdź pierwszy alert, który nie został jeszcze odrzucony
+      const nextAlertIndex = alerts.findIndex(alert => 
+        !dismissedAlerts.includes(alert.id)
+      );
       
-      // Sprawdź, czy alert nie jest od razu przekroczony
-      if (
-        (operation === 'above' && currentLevel >= thresholdValue) ||
-        (operation === 'below' && currentLevel <= thresholdValue)
-      ) {
-        sendLocalNotification(
-          `Alert dla stacji ${stationName}`,
-          `Aktualny poziom (${currentLevel} cm) jest ${operation === 'above' ? 'powyżej' : 'poniżej'} ustawionego progu (${thresholdValue} cm)`
-        );
+      if (nextAlertIndex !== -1) {
+        setCurrentAlertIndex(nextAlertIndex);
+        showNextAlert(nextAlertIndex);
       }
-    } else {
-      Alert.alert('Błąd', 'Nie udało się dodać alertu. Być może taki alert już istnieje.');
+    }
+
+    // Czyszczenie timeoutu przy odmontowaniu komponentu
+    return () => {
+      if (hideTimeout.current) {
+        clearTimeout(hideTimeout.current);
+      }
+    };
+  }, [alerts, visibleAlert, dismissedAlerts, notificationsEnabled]);
+
+  // Funkcja pokazująca następny alert
+  const showNextAlert = (index = currentAlertIndex) => {
+    if (alerts.length > index) {
+      const alert = alerts[index];
+      
+      // Sprawdź, czy alert nie został już odrzucony
+      if (dismissedAlerts.includes(alert.id)) {
+        return;
+      }
+      
+      setVisibleAlert(alert);
+      
+      // Wibracja dla alertów o wysokim priorytecie
+      if (alert.severity === 'high' || alert.type === 'alarm') {
+        const pattern = Platform.OS === 'android' 
+          ? [0, 100, 100, 100] // android: wait, vibrate, wait, vibrate
+          : [0, 100, 30, 100]; // ios
+        Vibration.vibrate(pattern);
+      }
+
+      // Animacja pokazywania alertu
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true
+        })
+      ]).start();
+
+      // Jeśli autoHide, ukryj alert po określonym czasie
+      if (autoHide) {
+        hideTimeout.current = setTimeout(() => {
+          hideAlert(false);
+        }, duration);
+      }
     }
   };
-  
-  // Funkcja usuwająca alert
-  const handleRemoveAlert = (alertId) => {
-    Alert.alert(
-      'Usuwanie alertu',
-      'Czy na pewno chcesz usunąć ten alert?',
-      [
-        {
-          text: 'Anuluj',
-          style: 'cancel'
-        },
-        {
-          text: 'Usuń',
-          onPress: () => {
-            removeAlert(alertId);
-            setStationAlerts(getAlertsForStation(stationId));
-          },
-          style: 'destructive'
+
+  // Funkcja ukrywająca aktualny alert
+  const hideAlert = (closeButtonPressed = false) => {
+    // Animacja ukrywania alertu
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: -200,
+        duration: 300,
+        useNativeDriver: true
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true
+      })
+    ]).start(() => {
+      // Po zakończeniu animacji
+      if (visibleAlert) {
+        // Dodaj alert do odrzuconych, jeśli został zamknięty ręcznie
+        if (closeButtonPressed) {
+          setDismissedAlerts(prev => [...prev, visibleAlert.id]);
         }
-      ]
-    );
+        
+        // Wywołaj callback, jeśli istnieje
+        if (onDismiss) {
+          onDismiss(visibleAlert);
+        }
+      }
+      
+      // Resetuj stany
+      setVisibleAlert(null);
+      
+      // Znajdź następny alert do wyświetlenia tylko jeśli alert nie był zamknięty ręcznie
+      if (!closeButtonPressed) {
+        let nextIndex = currentAlertIndex + 1;
+        
+        // Znajdź następny alert, który nie został odrzucony
+        while (nextIndex < alerts.length && dismissedAlerts.includes(alerts[nextIndex].id)) {
+          nextIndex++;
+        }
+        
+        if (nextIndex < alerts.length) {
+          setCurrentAlertIndex(nextIndex);
+        } else {
+          // Wróć do początku, jeśli przeszliśmy przez wszystkie alerty
+          setCurrentAlertIndex(0);
+        }
+      }
+    });
+
+    // Wyczyść timeout
+    if (hideTimeout.current) {
+      clearTimeout(hideTimeout.current);
+      hideTimeout.current = null;
+    }
+  };
+
+  // Obsługa kliknięcia w alert
+  const handleAlertPress = () => {
+    // Wyczyść timeout
+    if (hideTimeout.current) {
+      clearTimeout(hideTimeout.current);
+      hideTimeout.current = null;
+    }
+    
+    // Wywołaj funkcję onPress, jeśli została przekazana
+    if (onPress && visibleAlert) {
+      onPress(visibleAlert);
+    }
+    
+    // Ukryj alert, ale nie zaznaczaj go jako odrzucony
+    hideAlert(false);
   };
   
+  // Obsługa kliknięcia w przycisk zamknięcia
+  const handleClosePress = (event) => {
+    // Zatrzymaj propagację zdarzenia
+    if (event) {
+      event.stopPropagation();
+    }
+    
+    // Ukryj alert i zaznacz go jako odrzucony
+    hideAlert(true);
+  };
+
+  // Określa ikonę w zależności od typu alertu
+  const getAlertIcon = (alert) => {
+    if (!alert) return 'information-circle-outline';
+    
+    switch (alert.type) {
+      case 'alarm':
+        return 'warning';
+      case 'warning':
+        return 'alert-circle';
+      case 'info':
+      default:
+        return 'information-circle-outline';
+    }
+  };
+
+  // Określa kolor alertu w zależności od typu
+  const getAlertColor = (alert) => {
+    if (!alert) return theme.colors.info;
+    
+    switch (alert.type) {
+      case 'alarm':
+        return theme.colors.danger;
+      case 'warning':
+        return theme.colors.warning;
+      case 'info':
+      default:
+        return theme.colors.info;
+    }
+  };
+
+  // Jeśli powiadomienia są wyłączone lub nie ma alertu do wyświetlenia, nie renderuj nic
+  if (!notificationsEnabled || !visibleAlert) {
+    return null;
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.card }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>
-          Personalizowane alerty
-        </Text>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-          onPress={() => setModalVisible(true)}
-        >
-          <Ionicons name="add" size={20} color="white" />
-          <Text style={styles.addButtonText}>Dodaj alert</Text>
-        </TouchableOpacity>
-      </View>
-      
-      {stationAlerts.length > 0 ? (
-        <ScrollView style={styles.alertsList}>
-          {stationAlerts.map(alert => (
-            <View 
-              key={alert.id}
-              style={[
-                styles.alertItem,
-                {
-                  backgroundColor: 
-                    (operation === 'above' && currentLevel >= alert.threshold) ||
-                    (operation === 'below' && currentLevel <= alert.threshold)
-                      ? 'rgba(255, 0, 0, 0.1)'
-                      : theme.dark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
-                }
-              ]}
-            >
-              <View style={styles.alertInfo}>
-                <Text style={[styles.alertText, { color: theme.colors.text }]}>
-                  {alert.operation === 'above' ? 'Gdy poziom powyżej' : 'Gdy poziom poniżej'} {alert.threshold} cm
-                </Text>
-                <Text style={[styles.alertSubtext, { color: theme.colors.caption }]}>
-                  Utworzono: {new Date(alert.createdAt).toLocaleString('pl-PL')}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => handleRemoveAlert(alert.id)}
-              >
-                <Ionicons 
-                  name="trash-outline" 
-                  size={20} 
-                  color={theme.colors.danger} 
-                />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: theme.colors.caption }]}>
-            Brak ustawionych alertów dla tej stacji
-          </Text>
-        </View>
-      )}
-      
-      {/* Modal do dodawania nowego alertu */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          transform: [{ translateY }],
+          opacity,
+        }
+      ]}
+    >
+      <TouchableOpacity
+        style={[
+          styles.alertBox,
+          { backgroundColor: theme.dark ? '#2c3e50' : 'white' }
+        ]}
+        onPress={handleAlertPress}
+        activeOpacity={0.9}
       >
-        <View style={styles.modalContainer}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
-              Dodaj nowy alert
+        <View style={[styles.alertContent, { borderLeftColor: getAlertColor(visibleAlert) }]}>
+          <Ionicons 
+            name={getAlertIcon(visibleAlert)} 
+            size={24} 
+            color={getAlertColor(visibleAlert)} 
+            style={styles.alertIcon}
+          />
+          <View style={styles.textContainer}>
+            <Text 
+              style={[styles.alertTitle, { color: theme.colors.text }]}
+              numberOfLines={1}
+            >
+              {visibleAlert.title || 'Powiadomienie'}
             </Text>
-            
-            <View style={styles.operationSelector}>
-              <TouchableOpacity 
-                style={[
-                  styles.operationButton,
-                  operation === 'above' && { backgroundColor: theme.colors.primary }
-                ]}
-                onPress={() => setOperation('above')}
-              >
-                <Text style={[
-                  styles.operationButtonText,
-                  operation === 'above' && { color: 'white' }
-                ]}>
-                  Poziom powyżej
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[
-                  styles.operationButton,
-                  operation === 'below' && { backgroundColor: theme.colors.primary }
-                ]}
-                onPress={() => setOperation('below')}
-              >
-                <Text style={[
-                  styles.operationButtonText,
-                  operation === 'below' && { color: 'white' }
-                ]}>
-                  Poziom poniżej
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={[
-                  styles.input,
-                  { 
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text
-                  }
-                ]}
-                value={threshold}
-                onChangeText={setThreshold}
-                placeholder="Próg (cm)"
-                placeholderTextColor={theme.colors.placeholder}
-                keyboardType="numeric"
-              />
-              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>cm</Text>
-            </View>
-            
-            <View style={styles.modalButtonsContainer}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Anuluj</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.primary }]}
-                onPress={handleAddAlert}
-              >
-                <Text style={styles.saveButtonText}>Zapisz</Text>
-              </TouchableOpacity>
-            </View>
+            <Text 
+              style={[styles.alertMessage, { color: theme.dark ? '#aaa' : '#666' }]}
+              numberOfLines={2}
+            >
+              {visibleAlert.message || visibleAlert.description || 'Brak opisu'}
+            </Text>
           </View>
+          {alerts.length > 1 && (
+            <View style={styles.counterContainer}>
+              <Text style={[styles.counterText, { color: theme.colors.primary }]}>
+                {currentAlertIndex + 1}/{alerts.length}
+              </Text>
+            </View>
+          )}
         </View>
-      </Modal>
-    </View>
+        
+        <TouchableOpacity 
+          style={styles.closeButton} 
+          onPress={handleClosePress}
+          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+        >
+          <Ionicons name="close" size={20} color={theme.dark ? '#aaa' : '#666'} />
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 10,
+    right: 10,
+    zIndex: 1000,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: 'white',
-    marginLeft: 4,
-    fontWeight: 'bold',
-  },
-  alertsList: {
-    maxHeight: 200,
-  },
-  alertItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  alertInfo: {
-    flex: 1,
-  },
-  alertText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  alertSubtext: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  removeButton: {
-    padding: 8,
-  },
-  emptyContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  emptyText: {
-    textAlign: 'center',
-    fontSize: 14,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '80%',
-    padding: 20,
+  alertBox: {
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  operationSelector: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  operationButton: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#DDDDDD',
-  },
-  operationButtonText: {
-    fontSize: 14,
-  },
-  inputContainer: {
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    paddingHorizontal: 5,
+    paddingVertical: 5,
   },
-  input: {
+  alertContent: {
     flex: 1,
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginRight: 8,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  modalButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
+    alignItems: 'center',
     paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderLeftWidth: 4,
     borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 4,
   },
-  cancelButton: {
-    backgroundColor: '#DDDDDD',
+  alertIcon: {
+    marginRight: 10,
   },
-  cancelButtonText: {
-    color: '#333333',
+  textContainer: {
+    flex: 1,
+  },
+  alertTitle: {
+    fontSize: 15,
     fontWeight: 'bold',
+    marginBottom: 2,
   },
-  saveButton: {
-    // Kolor dodawany dynamicznie (theme.colors.primary)
+  alertMessage: {
+    fontSize: 13,
   },
-  saveButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  }
+  counterContainer: {
+    marginLeft: 8,
+    padding: 2,
+  },
+  counterText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  closeButton: {
+    padding: 8,
+  },
 });
 
 export default CustomAlertManager;

@@ -428,7 +428,7 @@ export const HYDRO_LEVELS = [
 
 // opolskie
   { id: 150170170, stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "Boczne koryto Opawy" },
-  { id: 150170160, stationName: "Branice", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "Opawa" },
+  { id: 150170160, stationName: "Branice 1", warningLevel: 180, alarmLevel: 240, voivodeship: "opolskie", riverId: "Opawa" },
   { id: 150170090, stationName: "Brzeg", warningLevel: 460, alarmLevel: 530, voivodeship: "opolskie", riverId: "Odra" },
   { id: 150170220, stationName: "Dobra", warningLevel: 140, alarmLevel: 200, voivodeship: "opolskie", riverId: "Biała" },
   { id: 151180070, stationName: "Gorzów Śląski", warningLevel: 160, alarmLevel: 210, voivodeship: "opolskie", riverId: "Prosna" },
@@ -672,7 +672,7 @@ export const HYDRO_LEVELS = [
   { id: 150190120, stationName: "Przeczyce", warningLevel: 100, alarmLevel: 150, voivodeship: "śląskie", riverId: "Przemsza" },
   { id: 150180160, stationName: "Pszczyna", warningLevel: 290, alarmLevel: 340, voivodeship: "śląskie", riverId: "Pszczynka" },
   { id: 150180220, stationName: "Pyskowice-Dzierżno", warningLevel: "nie określono", alarmLevel: "nie określono", voivodeship: "śląskie", riverId: "Drama" },
-  { id: 150180150, stationName: "Pyskowice-Dzierżno", warningLevel: "nie określono", alarmLevel: "nie określono", voivodeship: "śląskie", riverId: "Kłodnica" },
+  { id: 150180150, stationName: "Pyskowice-Dzierżno", warningLevel: "250", alarmLevel: "350", voivodeship: "śląskie", riverId: "Kłodnica" },
   { id: 150180060, stationName: "Racibórz-Miedonia", warningLevel: 400, alarmLevel: 600, voivodeship: "śląskie", riverId: "Odra" },
   { id: 150190080, stationName: "Radocha", warningLevel: 90, alarmLevel: 130, voivodeship: "śląskie", riverId: "Przemsza" },
   { id: 150180140, stationName: "Rybnik", warningLevel: "nie określono", alarmLevel: "nie określono", voivodeship: "śląskie", riverId: "Nacyna" },

@@ -76,11 +76,45 @@ export const MAIN_POLISH_RIVERS = {
     { latitude: 52.0500, longitude: 19.9000 }, // Łowicz
     { latitude: 52.2167, longitude: 20.3167 }, // Sochaczew
     { latitude: 52.3833, longitude: 20.4000 }  // Ujście do Wisły
+  ],
+  "Nysa Kłodzka": [
+    { latitude: 50.2167, longitude: 16.8333 }, // Źródło - Góry Bystrzyckie
+    { latitude: 50.2833, longitude: 16.6500 }, // Bystrzyca Kłodzka
+    { latitude: 50.4333, longitude: 16.6500 }, // Kłodzko
+    { latitude: 50.5000, longitude: 16.7500 }, // Bardo
+    { latitude: 50.8167, longitude: 17.1833 }, // Paczków
+    { latitude: 50.9789, longitude: 17.6236 }  // Ujście do Odry koło Brzegu
+  ],
+  "Bóbr": [
+    { latitude: 50.7833, longitude: 15.8167 }, // Źródło - Góry Izerskie
+    { latitude: 50.9167, longitude: 15.6667 }, // Jelenia Góra
+    { latitude: 51.2500, longitude: 15.5500 }, // Lwówek Śląski
+    { latitude: 51.4167, longitude: 15.4167 }, // Szprotawa
+    { latitude: 51.6167, longitude: 15.3333 }, // Żagań
+    { latitude: 51.9333, longitude: 15.2000 }  // Ujście do Odry
+  ],
+  "Nysa Łużycka": [
+    { latitude: 50.7500, longitude: 14.7000 }, // Źródło - Góry Izerskie
+    { latitude: 51.0000, longitude: 14.9167 }, // Zgorzelec
+    { latitude: 51.3500, longitude: 14.9833 }, // Pieńsk
+    { latitude: 51.7833, longitude: 14.6667 }, // Gubin
+    { latitude: 52.1167, longitude: 14.6500 }  // Ujście do Odry
   ]
 };
 
-// Funkcja do pobierania koordynatów dla rzeki
+/**
+ * Funkcja do pobierania koordynatów dla rzeki
+ * @param {string} riverName - Nazwa rzeki
+ * @returns {Array} - Tablica współrzędnych geograficznych
+ */
 export const getRiverCoordinates = (riverName) => {
+  if (!riverName) return [];
+  
+  // Najpierw próbujemy znaleźć dokładne dopasowanie
+  if (MAIN_POLISH_RIVERS[riverName]) {
+    return MAIN_POLISH_RIVERS[riverName];
+  }
+  
   // Normalizujemy nazwę rzeki dla porównania (usuwamy polskie znaki, sprowadzamy do małych liter)
   const normalizedName = riverName.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -92,7 +126,7 @@ export const getRiverCoordinates = (riverName) => {
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/ł/g, 'l');
     
-    return normalizedKey === normalizedName;
+    return normalizedKey === normalizedName || normalizedName.includes(normalizedKey) || normalizedKey.includes(normalizedName);
   });
   
   if (riverKey) {
@@ -103,15 +137,73 @@ export const getRiverCoordinates = (riverName) => {
   return [];
 };
 
-// Funkcja do interpolacji punktów pośrednich między stacjami na rzece
+/**
+ * Funkcja do interpolacji punktów pośrednich między stacjami na rzece
+ * @param {Array} riverCoordinates - Bazowe współrzędne rzeki
+ * @param {Array} stationsOnRiver - Stacje na rzece
+ * @returns {Array} - Tablica współrzędnych geograficznych z dodanymi punktami
+ */
 export const interpolateRiverPoints = (riverCoordinates, stationsOnRiver) => {
   if (!riverCoordinates || riverCoordinates.length < 2 || !stationsOnRiver || stationsOnRiver.length < 2) {
     return riverCoordinates || [];
   }
   
-  // Tutaj można zaimplementować bardziej złożoną logikę interpolacji,
+  // Tutaj możemy zaimplementować bardziej złożoną logikę interpolacji,
   // na przykład dopasowując stacje do najbliższych punktów na predefiniowanej ścieżce rzeki
   // Na razie zwracamy po prostu istniejące punkty
   
   return riverCoordinates;
+};
+
+/**
+ * Generuje uproszczoną geometrię rzeki na podstawie nazwy
+ * @param {string} riverName - Nazwa rzeki
+ * @returns {Array} Przybliżone współrzędne rzeki
+ */
+export const generateSimpleRiverGeometry = (riverName) => {
+  // Jeśli nie mamy danych dla tej rzeki, generujemy losowy przebieg
+  // Ta funkcja jest używana jako fallback, gdy nie mamy rzeczywistych danych
+  
+  // Losowe odchylenie dla punktów
+  const randomOffset = () => (Math.random() - 0.5) * 0.3;
+  
+  // Generowanie punktów w zależności od pierwszej litery nazwy rzeki
+  // Aby różne rzeki miały różne przebiegi
+  const seed = riverName ? riverName.charCodeAt(0) % 4 : 0;
+  
+  switch (seed) {
+    case 0: // Kierunek płn-płd
+      return [
+        { latitude: 49.5 + randomOffset(), longitude: 19.0 + randomOffset() },
+        { latitude: 50.5 + randomOffset(), longitude: 19.2 + randomOffset() },
+        { latitude: 51.5 + randomOffset(), longitude: 19.5 + randomOffset() },
+        { latitude: 52.5 + randomOffset(), longitude: 19.3 + randomOffset() },
+        { latitude: 53.5 + randomOffset(), longitude: 19.1 + randomOffset() }
+      ];
+    case 1: // Kierunek wsch-zach
+      return [
+        { latitude: 51.0 + randomOffset(), longitude: 15.0 + randomOffset() },
+        { latitude: 51.2 + randomOffset(), longitude: 16.0 + randomOffset() },
+        { latitude: 51.1 + randomOffset(), longitude: 17.0 + randomOffset() },
+        { latitude: 51.3 + randomOffset(), longitude: 18.0 + randomOffset() },
+        { latitude: 51.2 + randomOffset(), longitude: 19.0 + randomOffset() }
+      ];
+    case 2: // Kierunek płd-zach na płn-wsch
+      return [
+        { latitude: 49.5 + randomOffset(), longitude: 15.5 + randomOffset() },
+        { latitude: 50.5 + randomOffset(), longitude: 16.5 + randomOffset() },
+        { latitude: 51.5 + randomOffset(), longitude: 17.5 + randomOffset() },
+        { latitude: 52.5 + randomOffset(), longitude: 18.5 + randomOffset() },
+        { latitude: 53.5 + randomOffset(), longitude: 19.5 + randomOffset() }
+      ];
+    case 3: // Kierunek płd-wsch na płn-zach
+    default:
+      return [
+        { latitude: 49.5 + randomOffset(), longitude: 23.5 + randomOffset() },
+        { latitude: 50.5 + randomOffset(), longitude: 22.5 + randomOffset() },
+        { latitude: 51.5 + randomOffset(), longitude: 21.5 + randomOffset() },
+        { latitude: 52.5 + randomOffset(), longitude: 20.5 + randomOffset() },
+        { latitude: 53.5 + randomOffset(), longitude: 19.5 + randomOffset() }
+      ];
+  }
 };

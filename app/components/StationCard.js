@@ -84,7 +84,7 @@ export default function StationCard({ station, onPress }) {
       {/* --- Dolny wiersz: Rzeka i Strzałka --- */}
       <View style={styles.footerRow}>
         <View style={styles.riverContainer}>
-          <Ionicons name="water-outline" size={14} color={theme.colors.primary} />
+          <Ionicons name="water" size={14} color={theme.colors.primary} />
           <Text style={[styles.riverName, { color: theme.colors.text }]}>
             {station.river || 'Brak danych'}
           </Text>
@@ -121,9 +121,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   statusIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 16,
   },
   mainContentRow: {
     flexDirection: 'row',
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   trendText: { // Podstawowe style dla tekstu trendu
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
     textAlign: 'right',
     marginBottom: 4,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   riverName: {
      marginLeft: 6,
-     fontSize: 14,
+     fontSize: 16,
      opacity: 0.8,
   },
 });

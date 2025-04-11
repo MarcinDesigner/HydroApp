@@ -28,13 +28,14 @@ const RiversScreen = () => {
   useEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={{ marginLeft: 8 }}
-        >
-          <Ionicons name="chevron-back" size={24} color="white" />
-        </TouchableOpacity>
-      ),
+  <TouchableOpacity 
+    onPress={() => navigation.goBack()} 
+    style={{ marginLeft: 10 }}
+    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+  >
+    <Ionicons name="arrow-back" size={24} color="white" />
+  </TouchableOpacity>
+),
       title: "Rzeki"
     });
   }, [navigation]);

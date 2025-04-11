@@ -1,229 +1,266 @@
 // Plik: app/screens/MapScreen.js
-import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Dimensions, Text, TouchableOpacity, Animated } from 'react-native';
-import MapView, { Marker, Callout, UrlTile, PROVIDER_GOOGLE } from 'react-native-maps';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { View, StyleSheet, Dimensions, Text, TouchableOpacity, Alert, Animated } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useRefresh } from '../context/RefreshContext';
 import Loader from '../components/Loader';
-import CustomCallout from '../components/CustomCallout';
-import * as Location from 'expo-location';
-import { getDistance } from 'geolib';
 import { fetchStations } from '../api/stationsApi';
 import { HYDRO_STATION_COORDINATES } from '../services/stationCoordinatesService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getCoordinatesForPlace } from '../services/geocodingService';
 
-// Współrzędne miast wojewódzkich w Polsce
-const VOIVODESHIP_CAPITALS = {
-  "Warszawa": { latitude: 52.2297, longitude: 21.0122 },
-  // pozostałe współrzędne bez zmian
-};
+// Minimalna odległość między współrzędnymi (stopnie), aby uznać je za różne punkty
+const MIN_COORDINATE_DISTANCE = 0.001;
 
 export default function MapScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const { theme, isDarkMode } = useTheme();
   const { isRefreshing, addListener, removeListener } = useRefresh();
+  
+  // Stan stacji
+  const [rawStations, setRawStations] = useState([]);
   const [stations, setStations] = useState([]);
-  const [stationsWithCoords, setStationsWithCoords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentZoom, setCurrentZoom] = useState(6);
-  const mapRef = useRef(null);
+  
+  // Stan interfejsu
   const [region, setRegion] = useState({
-    latitude: 52.2297,
-    longitude: 19.0122,
-    latitudeDelta: 6,
-    longitudeDelta: 6,
+    latitude: 52.0,
+    longitude: 19.0,
+    latitudeDelta: 5.5,
+    longitudeDelta: 5.5,
   });
-  
-  // Stany dla lokalizacji
-  const [userLocation, setUserLocation] = useState(null);
-  const [nearbyStations, setNearbyStations] = useState([]);
-  const [locationEnabled, setLocationEnabled] = useState(false);
-  
-  // Nowe stany dla funkcjonalności chowania elementów
+  const [currentZoom, setCurrentZoom] = useState(6);
+  const [activeStation, setActiveStation] = useState(null);
   const [showLegend, setShowLegend] = useState(true);
-  const [showNearbyStations, setShowNearbyStations] = useState(false); // Domyślnie ukryte
-  const [isMapGrayscale, setIsMapGrayscale] = useState(false);
   
-  // Animacje dla zwijania/rozwijania
-  const nearbyStationsHeight = useRef(new Animated.Value(0)).current; // Zaczynamy od zwinietej (0)
-  const legendHeight = useRef(new Animated.Value(160)).current; // Wysokość legendy
+  // Refy
+  const mapRef = useRef(null);
+  const legendHeight = useRef(new Animated.Value(160)).current;
 
-  // Funkcja do określania rozmiaru markera w zależności od przybliżenia
-  const getMarkerSize = () => {
-    return currentZoom < 7 ? 36 :
-           currentZoom < 9 ? 40 :
-           currentZoom < 11 ? 44 :
-           currentZoom < 13 ? 48 : 
-           52;
+  // ----------------------
+  // FUNKCJE POMOCNICZE
+  // ----------------------
+  
+  // Obliczanie przybliżenia na podstawie delty regionu
+  const calculateZoomLevel = (latitudeDelta) => {
+    return Math.round(Math.log2(360 / latitudeDelta));
   };
-
-  // Wybór odpowiedniego URL dla kafelków mapy bazowej
-  const getTileUrlTemplate = () => {
-    if (isMapGrayscale) {
-      // Czarno-biały styl mapy
-      return 'https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}{r}.png';
-    } else if (isDarkMode) {
-      // Ciemny styl
-      return 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
-    } else {
-      // Standardowy styl
-      return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-    }
-  };
-
-  // *** POBIERANIE USTAWIEŃ Z ASYNCSTORAGE ***
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        // Ładowanie ustawień lokalizacji
-        const locationEnabled = await AsyncStorage.getItem('location_enabled');
-        setLocationEnabled(locationEnabled === 'true');
-        
-        // Ładowanie ustawień widoczności legendy
-        const legendVisible = await AsyncStorage.getItem('legend_visible');
-        if (legendVisible !== null) {
-          const isVisible = legendVisible === 'true';
-          setShowLegend(isVisible);
-          // Ustaw początkową wartość animacji
-          legendHeight.setValue(isVisible ? 160 : 36); // Tylko nagłówek jeśli ukryte
-        }
-        
-        // Ładowanie ustawień trybu czarno-białego
-        const mapGrayscale = await AsyncStorage.getItem('map_grayscale');
-        if (mapGrayscale !== null) {
-          setIsMapGrayscale(mapGrayscale === 'true');
-        }
-      } catch (error) {
-        console.error('Błąd podczas ładowania ustawień:', error);
-      }
+  
+  // Deduplikacja stacji na podstawie współrzędnych
+  const deduplicateStations = (stations) => {
+    // Klucz do grupowania stacji o podobnych współrzędnych
+    const getGroupKey = (lat, lng) => {
+      // Zaokrąglamy do 3 miejsc po przecinku, co daje ok. 111 metrów dokładności
+      const roundedLat = Math.round(lat * 1000) / 1000;
+      const roundedLng = Math.round(lng * 1000) / 1000;
+      return `${roundedLat},${roundedLng}`;
     };
-
-    loadSettings();
-  }, []);
-
-  // *** FUNKCJA DO POBIERANIA LOKALIZACJI UŻYTKOWNIKA ***
-  const getUserLocation = async () => {
-    try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        console.log('Brak uprawnień do lokalizacji');
-        return;
-      }
-      
-      let location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      
-      setUserLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-      
-      // Po uzyskaniu lokalizacji, oblicz najbliższe stacje
-      if (stations.length > 0) {
-        calculateNearbyStations(location.coords, stations);
-      }
-      
-    } catch (error) {
-      console.error('Błąd podczas pobierania lokalizacji:', error);
-    }
-  };
-
-  // *** FUNKCJA DO OBLICZANIA ODLEGŁOŚCI DO STACJI ***
-  const calculateNearbyStations = (userCoords, stationsList) => {
-    if (!userCoords || !stationsList.length) return;
     
-    const stationsWithDistance = stationsList
-      .filter(station => station.latitude && station.longitude)
-      .map(station => {
-        const distance = getDistance(
-          { latitude: userCoords.latitude, longitude: userCoords.longitude },
-          { latitude: station.latitude, longitude: station.longitude }
-        );
-        
-        return { ...station, distance };
-      })
-      .sort((a, b) => a.distance - b.distance);
+    const stationGroups = {};
     
-    setNearbyStations(stationsWithDistance.slice(0, 5));
+    // Grupujemy stacje według zaokrąglonych współrzędnych
+    stations.forEach(station => {
+      if (!station.latitude || !station.longitude) return;
+      
+      const groupKey = getGroupKey(station.latitude, station.longitude);
+      
+      if (!stationGroups[groupKey]) {
+        stationGroups[groupKey] = [];
+      }
+      
+      stationGroups[groupKey].push(station);
+    });
+    
+    // Dla każdej grupy wybieramy reprezentanta grupy
+    const uniqueStations = Object.values(stationGroups).map(group => {
+      if (group.length === 1) {
+        return group[0]; // Tylko jedna stacja, zwracamy ją bez zmian
+      }
+      
+      // Dla wielu stacji w tej samej lokalizacji, wybieramy najważniejszą
+      // Priorytety: alarm > warning > normal, większa rzeka, większy poziom wody
+      return group.reduce((best, current) => {
+        // Status - priorytet dla alarmów
+        if (current.status === 'alarm' && best.status !== 'alarm') {
+          return current;
+        }
+        if (current.status === 'warning' && best.status === 'normal') {
+          return current;
+        }
+        
+        // Większy poziom wody
+        if (current.level > best.level) {
+          return current;
+        }
+        
+        // Główne rzeki mają priorytet
+        const mainRivers = ['Wisła', 'Odra', 'Warta', 'Bug'];
+        if (mainRivers.includes(current.river) && !mainRivers.includes(best.river)) {
+          return current;
+        }
+        
+        return best;
+      }, group[0]);
+    });
+    
+    return uniqueStations;
   };
 
-  // *** WYWOŁANIE LOKALIZACJI GDY ZMIENIĄ SIĘ STACJE LUB USTAWIENIA ***
-  useEffect(() => {
-    if (locationEnabled && stations.length > 0) {
-      getUserLocation();
+  // Określanie, które stacje powinny być widoczne na mapie
+  const filterVisibleStations = (stations, zoom, mapRegion) => {
+    if (!stations || stations.length === 0) return [];
+    
+    // Najpierw filtrujemy stacje bez określonych poziomów
+    const stationsWithLevels = stations.filter(station => 
+      station.latitude && station.longitude && 
+      !(station.warningLevel === 'nie określono' || station.alarmLevel === 'nie określono' ||
+        station.warningLevel === 888 || station.alarmLevel === 999)
+    );
+    
+    // Tworzymy wynikową tablicę od razu ze stacjami alarmowymi i ostrzegawczymi
+    // (zawsze je pokazujemy, niezależnie od zoomu)
+    const result = stationsWithLevels.filter(station => 
+      (station.status === 'alarm' || station.status === 'warning')
+    );
+    
+    console.log(`Liczba stacji alarmowych/ostrzegawczych: ${result.length}`);
+    
+    // Przy niskim zoomie (domyślny widok) pokaż wszystkie stacje z określonymi poziomami
+    if (zoom <= 6) {
+      stationsWithLevels.forEach(station => {
+        // Jeśli stacja jest już w wynikach (jako alarmowa/ostrzegawcza), pomijamy
+        if (result.some(s => s.id === station.id)) return;
+        
+        // Dodaj wszystkie pozostałe stacje
+        result.push(station);
+      });
     }
-  }, [stations, locationEnabled]);
-
-  // Główne ładowanie danych
-  useEffect(() => {
-    loadStations();
-  }, []);
-
-  // Efekt dla automatycznego odświeżania
-  useEffect(() => {
-    const onRefreshCallback = () => {
-      loadStations(true);
-    };
-    addListener(onRefreshCallback);
-    return () => {
-      removeListener(onRefreshCallback);
-    };
-  }, [addListener, removeListener]);
-
-  // Po załadowaniu stacji, przygotowujemy dane z współrzędnymi
-  useEffect(() => {
-    if (stations.length > 0) {
-      const stationsMap = new Map();
-      
-      stations.forEach(station => {
-        // Sprawdź czy stacja ma współrzędne bezpośrednio
-        if (station.latitude && station.longitude) {
-          stationsMap.set(station.id, station);
-          return;
-        }
+    // Przy średnim przybliżeniu 
+    else if (zoom <= 8) {
+      // Sprawdzamy, czy stacja jest w widocznym obszarze (z marginesem)
+      stationsWithLevels.forEach(station => {
+        // Jeśli stacja jest już w wynikach (jako alarmowa/ostrzegawcza), pomijamy
+        if (result.some(s => s.id === station.id)) return;
         
-        // Sprawdź czy mamy współrzędne w naszej bazie dla tej stacji
-        const stationCoords = HYDRO_STATION_COORDINATES[station.name];
-        if (stationCoords) {
-          stationsMap.set(station.id, {
-            ...station,
-            latitude: stationCoords.latitude,
-            longitude: stationCoords.longitude
-          });
-          return;
-        }
+        const latDelta = mapRegion.latitudeDelta * 0.6;
+        const lonDelta = mapRegion.longitudeDelta * 0.6;
         
-        // Sprawdź, czy nazwa stacji zawiera nazwę któregoś z miast wojewódzkich
-        const matchingCapital = Object.keys(VOIVODESHIP_CAPITALS).find(capitalName => 
-          station.name.includes(capitalName)
-        );
-        
-        if (matchingCapital && VOIVODESHIP_CAPITALS[matchingCapital]) {
-          stationsMap.set(station.id, {
-            ...station,
-            latitude: VOIVODESHIP_CAPITALS[matchingCapital].latitude,
-            longitude: VOIVODESHIP_CAPITALS[matchingCapital].longitude
-          });
+        if (
+          station.latitude >= mapRegion.latitude - latDelta &&
+          station.latitude <= mapRegion.latitude + latDelta &&
+          station.longitude >= mapRegion.longitude - lonDelta &&
+          station.longitude <= mapRegion.longitude + lonDelta
+        ) {
+          result.push(station);
         }
       });
-      
-      setStationsWithCoords(Array.from(stationsMap.values()));
     }
-  }, [stations]);
+    // Przy dużym przybliżeniu
+    else {
+      // Wszystkie stacje w widocznym obszarze
+      stationsWithLevels.forEach(station => {
+        // Jeśli stacja jest już w wynikach (jako alarmowa/ostrzegawcza), pomijamy
+        if (result.some(s => s.id === station.id)) return;
+        
+        const latDelta = mapRegion.latitudeDelta * 0.7;
+        const lonDelta = mapRegion.longitudeDelta * 0.7;
+          
+        if (
+          station.latitude >= mapRegion.latitude - latDelta &&
+          station.latitude <= mapRegion.latitude + latDelta &&
+          station.longitude >= mapRegion.longitude - lonDelta &&
+          station.longitude <= mapRegion.longitude + lonDelta
+        ) {
+          result.push(station);
+        }
+      });
+    }
+    
+    return result;
+  };
+  
+  // Ustalanie koloru markera z uwzględnieniem specjalnych przypadków
+  const getStationColor = (station) => {
+    if (!station) return theme.colors.info;
+    
+    // Sprawdź czy poziomy są określone i nie są wartościami specjalnymi
+    const isWarningUndefined = station.warningLevel === "nie określono" || station.warningLevel == null || station.warningLevel === 888;
+    const isAlarmUndefined = station.alarmLevel === "nie określono" || station.alarmLevel == null || station.alarmLevel === 999;
 
+    // Jeśli oba poziomy są nieokreślone, użyj koloru info
+    if (isWarningUndefined && isAlarmUndefined) {
+      return theme.colors.info;
+    }
+
+    // Jeśli status alarmowy, ale poziom alarmowy jest nieokreślony, użyj info
+    if (station.status === 'alarm' && isAlarmUndefined) {
+      return theme.colors.info;
+    }
+
+    // Jeśli status ostrzegawczy, ale poziom ostrzegawczy jest nieokreślony, użyj info
+    if (station.status === 'warning' && isWarningUndefined) {
+      return theme.colors.info;
+    }
+
+    // Standardowe kolory dla określonych poziomów
+    switch (station.status) {
+      case 'alarm': return theme.colors.danger;
+      case 'warning': return theme.colors.warning;
+      case 'normal': return theme.colors.safe;
+      default: return theme.colors.info;
+    }
+  };
+  
+  // Funkcja ustalająca rozmiar markera
+  const getMarkerSize = (status, zoom) => {
+    // Bazowy rozmiar zależny od przybliżenia
+    const baseSize = zoom < 7 ? 36 :
+                    zoom < 9 ? 40 :
+                    zoom < 11 ? 44 :
+                    zoom < 13 ? 48 : 
+                    52;
+    
+    // Zwiększamy rozmiar dla stacji alarmowych i ostrzegawczych
+    if (status === 'alarm') {
+      return baseSize * 1.5; // 50% większe dla alarmów
+    } else if (status === 'warning') {
+      return baseSize * 1.2; // 20% większe dla ostrzeżeń
+    }
+    
+    return baseSize;
+  };
+  
+  // Pobranie stacji z API
   const loadStations = async (silent = false) => {
     try {
       if (!silent) {
         setRefreshing(true);
       }
       
+      // Dodaj logi debugujące
+      console.log("Pobieranie stacji z API...");
       const data = await fetchStations();
-      setStations(data);
+      console.log(`Pobrano ${data.length} stacji z API`);
+      
+      // Sprawdź, ile stacji ma współrzędne geograficzne
+      const stationsWithCoords = data.filter(s => 
+        s.latitude && s.longitude && 
+        (s.latitude !== 52.0 || s.longitude !== 19.0) // Pomijamy domyślne współrzędne
+      );
+      console.log(`Stacje ze współrzędnymi: ${stationsWithCoords.length}/${data.length}`);
+      
+      // Sprawdź liczbę stacji alarmowych i ostrzegawczych
+      const alarmStations = data.filter(s => s.status === 'alarm');
+      const warningStations = data.filter(s => s.status === 'warning');
+      console.log(`Stacje alarmowe: ${alarmStations.length}, Stacje ostrzegawcze: ${warningStations.length}`);
+      
+      // Zapisujemy surowe dane
+      setRawStations(data);
       
       if (!silent) {
         setLoading(false);
@@ -238,116 +275,408 @@ export default function MapScreen() {
     }
   };
 
-  const handleMarkerPress = (station) => {
-    navigation.navigate('StationDetails', { 
-      stationId: station.id,
-      stationName: station.name
-    });
-  };
-
-  const handleRegionChange = (newRegion) => {
-    setRegion(newRegion);
+  // Funkcja pomocnicza do trybu diagnostycznego - zaktualizowana
+  const runDiagnostics = () => {
+    // Upewnij się, że wszystkie wartości są dostępne
+    console.log("Wykonuję diagnostykę stacji...");
+    console.log("Liczba stacji w stations:", stations.length);
+    console.log("Liczba stacji w rawStations:", rawStations.length);
+    console.log("Liczba stacji w visibleStations:", visibleStations.length);
     
-    // Oblicz przybliżenie na podstawie rozmiaru widoku
-    const newZoom = Math.round(Math.log2(360 / newRegion.latitudeDelta));
-    setCurrentZoom(newZoom);
-  };
-
-  // Funkcja pomocnicza do ustalania koloru na podstawie statusu stacji
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'alarm': return theme.colors.danger;
-      case 'warning': return theme.colors.warning;
-      case 'normal': return theme.colors.safe;
-      default: return theme.colors.info;
-    }
-  };
-  
-  // Funkcja do ustalenia czy stacja jest widoczna na podstawie przybliżenia
-  const isStationVisible = (station, zoom, region) => {
-    // Przy małym przybliżeniu pokazuj stacje z większą ważnością
-    if (zoom < 7) {
-      const isImportantRiver = station.river && 
-        ['Wisła', 'Odra', 'Warta', 'Bug', 'San', 'Narew'].includes(station.river);
-      
-      return isImportantRiver;
-    }
-    
-    // Przy dużym przybliżeniu pokazuj wszystkie stacje w obszarze widoku
-    if (zoom >= 13) {
-      const latDelta = region.latitudeDelta * 0.6;
-      const lonDelta = region.longitudeDelta * 0.6;
-      
-      return (
-        station.latitude >= region.latitude - latDelta &&
-        station.latitude <= region.latitude + latDelta &&
-        station.longitude >= region.longitude - lonDelta &&
-        station.longitude <= region.longitude + lonDelta
-      );
-    }
-    
-    // Obliczamy odległość od aktualnego centrum mapy
-    const distanceFromCenter = Math.sqrt(
-      Math.pow(station.latitude - region.latitude, 2) +
-      Math.pow(station.longitude - region.longitude, 2)
+    // Liczenie stacji według statusu
+    const alarmStations = stations.filter(s => s.status === 'alarm');
+    const warningStations = stations.filter(s => s.status === 'warning');
+    const normalStations = stations.filter(s => s.status !== 'alarm' && s.status !== 'warning');
+    const stationsWithoutCoords = stations.filter(s => 
+      !s.latitude || !s.longitude || 
+      (s.latitude === 52.0 && s.longitude === 19.0)
+    );
+    const stationsWithoutLevels = stations.filter(s => 
+      s.warningLevel === 'nie określono' || s.alarmLevel === 'nie określono' ||
+      s.warningLevel === 888 || s.alarmLevel === 999
     );
     
-    // Określamy widoczność stacji w zależności od przybliżenia i odległości od centrum
-    const visibilityThreshold = zoom < 9 ? 0.6 : 
-                               zoom < 11 ? 1.2 : 
-                               zoom < 13 ? 2.5 : 4.0;
+    console.log("Stacje alarmowe:", alarmStations.length);
+    console.log("Stacje ostrzegawcze:", warningStations.length);
+    console.log("Stacje normalne:", normalStations.length);
+    console.log("Stacje bez współrzędnych:", stationsWithoutCoords.length);
+    console.log("Stacje bez poziomów:", stationsWithoutLevels.length);
     
-    return distanceFromCenter <= visibilityThreshold;
+    Alert.alert(
+      "Diagnostyka stacji", 
+      `Całkowita liczba stacji: ${stations.length}\n` +
+      `Widoczne stacje: ${visibleStations.length}\n` +
+      `Stacje z API: ${rawStations.length}\n` +
+      `Stacje alarmowe: ${alarmStations.length}\n` +
+      `Stacje ostrzegawcze: ${warningStations.length}\n` +
+      `Stacje normalne: ${normalStations.length}\n` +
+      `Stacje bez współrzędnych: ${stationsWithoutCoords.length}\n` +
+      `Stacje bez poziomów: ${stationsWithoutLevels.length}`
+    );
+  };
+
+  // ----------------------
+  // HOOKI
+  // ----------------------
+
+
+
+  
+  // Ładowanie cache'owanych współrzędnych przed pobieraniem stacji
+  useEffect(() => {
+    const loadCachedCoordinates = async () => {
+      try {
+        const cachedCoords = await AsyncStorage.getItem('station_coordinates_cache');
+        if (cachedCoords) {
+          const coordsData = JSON.parse(cachedCoords);
+          // Połącz cache z istniejącymi współrzędnymi
+          Object.entries(coordsData).forEach(([id, coords]) => {
+            if (!HYDRO_STATION_COORDINATES[id]) {
+              HYDRO_STATION_COORDINATES[id] = coords;
+            }
+          });
+          console.log(`Załadowano ${Object.keys(coordsData).length} współrzędnych z cache`);
+        }
+      } catch (error) {
+        console.error("Błąd podczas ładowania cache współrzędnych:", error);
+      }
+    };
+    
+    loadCachedCoordinates();
+  }, []);
+  
+  // Ładowanie stacji
+  useEffect(() => {
+    loadStations();
+    
+    // Pobierz parametr highlightStationId
+    const highlightStationId = route?.params?.highlightStationId;
+    
+    // Ustawiamy tytuł i przycisk powrotu
+    navigation.setOptions({
+      title: 'Mapa',
+      headerLeft: () => (
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={{ marginLeft: 10 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <View style={{ flexDirection: 'row' }}>
+          <TouchableOpacity 
+            onPress={runDiagnostics}
+            style={{ marginRight: 16 }}
+          >
+            <Ionicons name="analytics-outline" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+      )
+    });
+  }, [navigation]);
+  
+  // Odświeżanie automatyczne
+  useEffect(() => {
+    const onRefreshCallback = () => {
+      loadStations(true);
+    };
+    
+    addListener(onRefreshCallback);
+    
+    return () => {
+      removeListener(onRefreshCallback);
+    };
+  }, [addListener, removeListener]);
+  
+  // Uzupełnianie współrzędnych i deduplikacja stacji
+  useEffect(() => {
+    if (rawStations.length === 0) return;
+    
+    // Funkcja uzupełniająca współrzędne
+    const enhanceStationsWithCoordinates = async () => {
+      // Stacje, które będą wymagały geocodingu
+      const stationsNeedingGeocoding = [];
+      
+      // Wstępne uzupełnienie ze stałej bazy
+      const enhancedStations = rawStations.map(station => {
+        // Jeśli stacja ma już współrzędne, używamy ich
+        if (station.latitude && station.longitude) {
+          return station;
+        }
+        
+        // Sprawdzamy, czy mamy współrzędne w naszej bazie dla tej stacji
+        const stationCoords = HYDRO_STATION_COORDINATES[station.id] || HYDRO_STATION_COORDINATES[station.name];
+        if (stationCoords) {
+          return {
+            ...station,
+            latitude: stationCoords.latitude,
+            longitude: stationCoords.longitude
+          };
+        }
+        
+        // Jeśli nie ma współrzędnych, dodajemy do listy do geocodingu (jeśli mamy nazwę rzeki lub miejscowości)
+        if (station.name && (station.name !== "-" || station.river && station.river !== "-")) {
+          stationsNeedingGeocoding.push(station);
+          
+          // Zwracamy tymczasowo stację z domyślnymi współrzędnymi dla Polski
+          return {
+            ...station,
+            latitude: 52.0,
+            longitude: 19.0,
+            needsGeocoding: true // Flaga do identyfikacji stacji wymagających geocodingu
+          };
+        }
+        
+        // Jeśli nie ma współrzędnych i nie możemy geocodować, stosujemy domyślne dla Polski
+        return {
+          ...station,
+          latitude: 52.0,
+          longitude: 19.0
+        };
+      });
+      
+      // Przeprowadzamy geocoding dla stacji, które tego potrzebują (w grupach, aby nie przeciążyć API)
+      if (stationsNeedingGeocoding.length > 0) {
+        try {
+          console.log(`Przeprowadzam geocoding dla ${stationsNeedingGeocoding.length} stacji...`);
+          
+          // Przygotuj batche po 10 stacji i rób opóźnienie między nimi
+          const BATCH_SIZE = 10;
+          const DELAY_MS = 2000; // 2 sekundy przerwy między batchami
+          
+          for (let i = 0; i < stationsNeedingGeocoding.length; i += BATCH_SIZE) {
+            const batchStations = stationsNeedingGeocoding.slice(i, i + BATCH_SIZE);
+            
+            // Równoległe przetwarzanie dla bieżącego batcha
+            const batchPromises = batchStations.map(async station => {
+              // Przygotuj zapytanie - preferuj rzekę + miejscowość jeśli dostępne
+              let queryPlace = station.name;
+              if (station.river && station.river !== "-") {
+                queryPlace = `${station.name} ${station.river}`;
+              }
+              
+              if (station.wojewodztwo) {
+                queryPlace += `, ${station.wojewodztwo}`;
+              }
+              
+              const coordinates = await getCoordinatesForPlace(queryPlace, 'Polska');
+              
+              // Aktualizuj stację w tablicy enhancedStations
+              if (coordinates) {
+                const stationIndex = enhancedStations.findIndex(s => s.id === station.id);
+                if (stationIndex !== -1) {
+                  enhancedStations[stationIndex].latitude = coordinates.latitude;
+                  enhancedStations[stationIndex].longitude = coordinates.longitude;
+                  enhancedStations[stationIndex].needsGeocoding = false;
+                }
+              }
+              
+              return true; // Zwracamy cokolwiek, aby Promise.all działał
+            });
+            
+            // Czekaj na zakończenie obecnej partii
+            await Promise.all(batchPromises);
+            
+            // Opóźnienie przed następną partią, aby nie przekroczyć limitów API
+            if (i + BATCH_SIZE < stationsNeedingGeocoding.length) {
+              await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+            }
+          }
+          
+          console.log("Geocoding zakończony.");
+        } catch (error) {
+          console.error("Błąd podczas geocodingu:", error);
+        }
+      }
+      
+      // Deduplikacja stacji o podobnych współrzędnych
+      const uniqueStations = deduplicateStations(enhancedStations);
+      setStations(uniqueStations);
+      
+      // Zapisz wyniki geocodingu lokalnie do ponownego użycia
+      try {
+        const geocodingResults = {};
+        enhancedStations.forEach(station => {
+          if (station.latitude && station.longitude && !station.needsGeocoding && 
+              (station.latitude !== 52.0 || station.longitude !== 19.0)) {
+            geocodingResults[station.id] = {
+              latitude: station.latitude,
+              longitude: station.longitude
+            };
+          }
+        });
+        
+        await AsyncStorage.setItem('station_coordinates_cache', JSON.stringify(geocodingResults));
+      } catch (error) {
+        console.error("Błąd podczas zapisywania cache geocodingu:", error);
+      }
+      
+      // Sprawdź, czy mamy podświetlić konkretną stację
+      const highlightedStationId = route?.params?.highlightStationId;
+      if (highlightedStationId) {
+        // Znajdź stację do podświetlenia
+        const stationToHighlight = uniqueStations.find(s => s.id === highlightedStationId);
+        if (stationToHighlight && stationToHighlight.latitude && stationToHighlight.longitude) {
+          console.log("Znaleziono stację do podświetlenia:", stationToHighlight.name);
+          
+          // Ustaw aktywną stację
+          setActiveStation(stationToHighlight);
+          
+          // Przejdź do lokalizacji stacji na mapie
+          setTimeout(() => {
+            mapRef.current?.animateToRegion({
+              latitude: stationToHighlight.latitude - 0.10,
+              longitude: stationToHighlight.longitude,
+              latitudeDelta: 0.5,
+              longitudeDelta: 0.5,
+            }, 1000);
+          }, 500); // Małe opóźnienie, żeby mapa zdążyła się załadować
+        }
+      }
+    };
+    
+    enhanceStationsWithCoordinates();
+  }, [rawStations, route?.params]);
+    
+  // Obsługa zmiany regionu mapy
+  const handleRegionChange = (newRegion) => {
+    setRegion(newRegion);
+    setCurrentZoom(calculateZoomLevel(newRegion.latitudeDelta));
   };
   
-  // *** NOWE FUNKCJE DO OBSŁUGI PANELI ***
+  // Obsługa kliknięcia markera
+  const handleMarkerPress = (station) => {
+    setActiveStation(station);
+    
+    // Animowane przesunięcie do wybranej stacji
+    mapRef.current?.animateToRegion({
+      latitude: station.latitude - 0.10,
+      longitude: station.longitude,
+      latitudeDelta: 0.5,
+      longitudeDelta: 0.5,
+    }, 1000);
+  };
+  
+  // Przejście do szczegółów stacji
+  const goToStationDetails = () => {
+    if (activeStation) {
+      navigation.navigate('StationDetails', {
+        stationId: activeStation.id,
+        stationName: activeStation.name
+      });
+    }
+  };
+  
+  // Resetowanie widoku
+  const resetMapView = () => {
+    setActiveStation(null);
+    
+    mapRef.current?.animateToRegion({
+      latitude: 52.0,
+      longitude: 19.0,
+      latitudeDelta: 5.5,
+      longitudeDelta: 5.5,
+    }, 1000);
+  };
   
   // Przełączanie widoczności legendy
-  const toggleLegend = async () => {
+  const toggleLegend = () => {
     const newValue = !showLegend;
     setShowLegend(newValue);
     
-    // Animacja wysokości
     Animated.timing(legendHeight, {
-      toValue: newValue ? 160 : 36, // Rozwinięta lub tylko nagłówek
+      toValue: newValue ? 160 : 36,
       duration: 300,
       useNativeDriver: false
     }).start();
     
-    // Zapisz ustawienie
+    // Zapisz ustawienie (opcjonalne)
     try {
-      await AsyncStorage.setItem('legend_visible', newValue.toString());
+      AsyncStorage.setItem('legend_visible', newValue.toString());
     } catch (error) {
       console.error('Błąd podczas zapisywania ustawień legendy:', error);
     }
   };
   
-  // Przełączanie widoczności panelu najbliższych stacji
-  const toggleNearbyStations = () => {
-    const newValue = !showNearbyStations;
-    setShowNearbyStations(newValue);
-    
-    // Animacja wysokości
-    Animated.timing(nearbyStationsHeight, {
-      toValue: newValue ? 300 : 0, // Pokazane lub całkowicie ukryte
-      duration: 300,
-      useNativeDriver: false
-    }).start();
-  };
+  // Filtrowanie widocznych stacji
+  const visibleStations = useMemo(() => {
+    return filterVisibleStations(stations, currentZoom, region);
+  }, [stations, currentZoom, region]);
   
-  // Przełączanie trybu czarno-białego mapy
-  const toggleMapGrayscale = async () => {
-    const newValue = !isMapGrayscale;
-    setIsMapGrayscale(newValue);
-    
-    // Zapisz ustawienie
-    try {
-      await AsyncStorage.setItem('map_grayscale', newValue.toString());
-    } catch (error) {
-      console.error('Błąd podczas zapisywania ustawień mapy:', error);
+  // Obliczanie statystyk stanu stacji
+  const calculateStats = useMemo(() => {
+    if (!stations || stations.length === 0) {
+      return { alarm: 0, warning: 0, normal: 0, total: 0 };
     }
-  };
-
+    
+    let alarm = 0;
+    let warning = 0;
+    let normal = 0;
+    
+    stations.forEach(station => {
+      if (station.status === 'alarm') alarm++;
+      else if (station.status === 'warning') warning++;
+      else normal++;
+    });
+    
+    return {
+      alarm,
+      warning,
+      normal,
+      total: stations.length
+    };
+  }, [stations]);
+  
+  // Generowanie markerów
+  const stationMarkers = useMemo(() => {
+    return visibleStations.map(station => {
+      const markerColor = getStationColor(station);
+      const markerSize = getMarkerSize(station.status, currentZoom);
+      
+      return (
+        <Marker
+          key={`station-${station.id}`}
+          coordinate={{
+            latitude: station.latitude,
+            longitude: station.longitude
+          }}
+          // Ustawiamy większy priorytet (zIndex) dla stacji alarmowych i ostrzegawczych,
+          // aby były zawsze na wierzchu
+          zIndex={station.status === 'alarm' ? 3 : station.status === 'warning' ? 2 : 1}
+          onPress={() => handleMarkerPress(station)}
+        >
+          <View style={styles.markerContainer}>
+            <View style={[
+              styles.marker, 
+              { 
+                backgroundColor: markerColor,
+                width: markerSize,
+                height: markerSize,
+                borderRadius: markerSize / 2,
+                // Dodajemy efekt pulsowania dla alarmów (opcjonalnie)
+                borderWidth: station.status === 'alarm' ? 3 : 2,
+                borderColor: 'white',
+              }
+            ]}>
+              <Text style={[
+                styles.markerText, 
+                { 
+                  fontSize: station.status === 'alarm' ? 14 : 
+                            station.status === 'warning' ? 13 : 12 
+                }
+              ]}>
+                {station.level}
+              </Text>
+            </View>
+          </View>
+        </Marker>
+      );
+    });
+  }, [visibleStations, currentZoom, theme.colors]);
+  
+  // Renderowanie podczas ładowania
   if (loading && !refreshing) {
     return <Loader message="Ładowanie mapy..." />;
   }
@@ -357,192 +686,179 @@ export default function MapScreen() {
       <MapView
         ref={mapRef}
         style={styles.map}
-        region={region}
+        provider={PROVIDER_GOOGLE}
+        initialRegion={region}
         onRegionChangeComplete={handleRegionChange}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-        showsCompass={true}
         rotateEnabled={true}
         zoomEnabled={true}
-        minZoomLevel={4}
-        maxZoomLevel={19}
-        attributionEnabled={true}
       >
-        {/* Dostawca kafelków OSM */}
-        <UrlTile 
-          urlTemplate={getTileUrlTemplate()}
-          maximumZ={19}
-          flipY={false}
-        />
-        
-        {/* Markery stacji z kolorami wskazującymi stan rzeki */}
-        {stationsWithCoords.map(station => {
-          if (!isStationVisible(station, currentZoom, region)) return null;
-          
-          // Określ kolor markera na podstawie statusu
-          const markerColor = getStatusColor(station.status);
-          
-          return (
-            <Marker
-              key={`station-${station.id}-${station.name}`}
-              coordinate={{
-                latitude: station.latitude,
-                longitude: station.longitude
-              }}
-              anchor={{ x: 0.5, y: 0.5 }}
-              onPress={() => handleMarkerPress(station)}
-            >
-              <View style={styles.customMarkerContainer}>
-                <View style={[
-                  styles.customMarker, 
-                  { 
-                    backgroundColor: markerColor,
-                    width: getMarkerSize(),
-                    height: getMarkerSize(),
-                    borderRadius: getMarkerSize() / 2
-                  }
-                ]}>
-                  <Text style={[
-                    styles.markerText, 
-                    { fontSize: currentZoom < 8 ? 10 : 12 }
-                  ]}>
-                    {station.level}
-                  </Text>
-                </View>
-              </View>
-            </Marker>
-          );
-        })}
+        {stationMarkers}
       </MapView>
       
-      {/* Przycisk trybu czarno-białego */}
-      <TouchableOpacity 
-        style={[styles.mapModeButton, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}
-        onPress={toggleMapGrayscale}
-      >
-        <Ionicons 
-          name={isMapGrayscale ? "color-palette-outline" : "contrast-outline"} 
-          size={24} 
-          color={theme.colors.primary} 
-        />
-      </TouchableOpacity>
-
-      {/* Przycisk do pokazywania najbliższych stacji */}
-      {locationEnabled && userLocation && nearbyStations.length > 0 && (
-        <TouchableOpacity 
-          style={[styles.locationButton, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}
-          onPress={toggleNearbyStations}
-        >
-          <Ionicons 
-            name="location-outline" 
-            size={24} 
-            color={theme.colors.primary} 
-          />
-        </TouchableOpacity>
-      )}
-
-      {/* Panel informacyjny o najbliższych stacjach - używamy Animated.View dla animacji */}
-      {locationEnabled && userLocation && nearbyStations.length > 0 && (
-        <Animated.View 
-          style={[
-            styles.nearbyStationsContainer, 
-            { 
-              backgroundColor: theme.dark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)',
-              height: nearbyStationsHeight,
-              opacity: nearbyStationsHeight.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 1]
-              })
-            }
-          ]}
-        >
-          {showNearbyStations && (
-            <>
-              <View style={styles.nearbyStationsHeader}>
-                <Text style={[styles.nearbyStationsTitle, { color: theme.colors.text }]}>
-                  Najbliższe stacje
-                </Text>
-                <TouchableOpacity onPress={toggleNearbyStations}>
-                  <Ionicons 
-                    name="close-outline" 
-                    size={24} 
-                    color={theme.colors.text} 
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.nearbyStationsContent}>
-                {nearbyStations.map((station) => (
-                  <TouchableOpacity
-                    key={station.id}
-                    style={styles.stationItem}
-                    onPress={() => navigation.navigate('StationDetails', { 
-                      stationId: station.id,
-                      stationName: station.name 
-                    })}
-                  >
-                    <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(station.status) }]} />
-                    <View style={styles.stationInfo}>
-                      <Text style={[styles.stationName, { color: theme.colors.text }]}>{station.name}</Text>
-                      <Text style={[styles.riverName, { color: theme.colors.caption }]}>{station.river || 'Brak danych'}</Text>
-                    </View>
-                    <View style={styles.stationDistance}>
-                      <Text style={[styles.distanceText, { color: theme.colors.primary }]}>{(station.distance/1000).toFixed(1)} km</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={theme.colors.caption} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
-          )}
-        </Animated.View>
-      )}
-
-      {/* Legenda z przyciskiem strzałki */}
-      <Animated.View 
-        style={[
-          styles.legendContainer, 
-          { 
-            backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)',
-            height: legendHeight
-          }
-        ]}
-      >
-        <View style={styles.legendHeader}>
-          <Text style={[styles.legendTitle, { color: theme.colors.text }]}>Legenda</Text>
-          <TouchableOpacity onPress={toggleLegend}>
-            <Ionicons 
-              name={showLegend ? "chevron-down-outline" : "chevron-up-outline"} 
-              size={20} 
-              color={theme.colors.text} 
-            />
-          </TouchableOpacity>
+      
+      {/* Panel statystyk */}
+      <View style={[
+        styles.statsPanel, 
+        { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }
+      ]}>
+        <Text style={[styles.statsTitle, { color: theme.colors.text }]}>
+          Statystyki stanu rzek
+        </Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <View style={[styles.statDot, { backgroundColor: theme.colors.danger }]} />
+            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+              {calculateStats.alarm}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.colors.text }]}>
+              Alarmowe
+            </Text>
+          </View>
+          
+          <View style={styles.statItem}>
+            <View style={[styles.statDot, { backgroundColor: theme.colors.warning }]} />
+            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+              {calculateStats.warning}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.colors.text }]}>
+              Ostrzegawcze
+            </Text>
+          </View>
+          
+          <View style={styles.statItem}>
+            <View style={[styles.statDot, { backgroundColor: theme.colors.safe }]} />
+            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+              {calculateStats.normal}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.colors.text }]}>
+              Normalne
+            </Text>
+          </View>
         </View>
-
-        {showLegend && (
-          <View style={styles.legendContent}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: theme.colors.safe }]} />
-              <Text style={[styles.legendText, { color: theme.colors.text }]}>Normalny</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: theme.colors.warning }]} />
-              <Text style={[styles.legendText, { color: theme.colors.text }]}>Ostrzegawczy</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: theme.colors.danger }]} />
-              <Text style={[styles.legendText, { color: theme.colors.text }]}>Alarmowy</Text>
+        <Text style={[styles.statsTotal, { color: theme.colors.text }]}>
+          Razem: {calculateStats.total} stacji
+        </Text>
+        
+        {/* Przycisk pokazujący tylko stacje alarmowe i ostrzegawcze */}
+        <TouchableOpacity
+          style={[styles.filterButton, { backgroundColor: theme.colors.primary }]}
+          onPress={() => {
+            // Znajdź środek wszystkich stacji alarmowych i ostrzegawczych
+            const alarmStations = stations.filter(
+              s => (s.status === 'alarm' || s.status === 'warning') && s.latitude && s.longitude
+            );
+            
+            if (alarmStations.length > 0) {
+              // Oblicz środek
+              let sumLat = 0, sumLng = 0;
+              alarmStations.forEach(s => {
+                sumLat += s.latitude;
+                sumLng += s.longitude;
+              });
+              
+              const centerLat = sumLat / alarmStations.length;
+              const centerLng = sumLng / alarmStations.length;
+              
+              // Dostosuj deltę, aby objąć wszystkie stacje
+              let maxLatDelta = 0, maxLngDelta = 0;
+              alarmStations.forEach(s => {
+                maxLatDelta = Math.max(maxLatDelta, Math.abs(s.latitude - centerLat));
+                maxLngDelta = Math.max(maxLngDelta, Math.abs(s.longitude - centerLng));
+              });
+              
+              // Animuj mapę, aby pokazać wszystkie stacje alarmowe i ostrzegawcze
+              mapRef.current?.animateToRegion({
+                latitude: centerLat,
+                longitude: centerLng,
+                latitudeDelta: Math.max(maxLatDelta * 2.5, 1.0),
+                longitudeDelta: Math.max(maxLngDelta * 2.5, 1.0),
+              }, 1000);
+            }
+          }}
+        >
+          <Text style={styles.filterButtonText}>
+            Pokaż stacje alarmowe
+          </Text>
+          <Ionicons name="warning" size={16} color="white" style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
+      </View>
+      
+      {/* Panel aktywnej stacji */}
+      {activeStation && (
+        <View style={[styles.stationPanel, { backgroundColor: theme.colors.card }]}>
+          <View style={styles.stationHeaderRow}>
+            <Text style={[styles.stationName, { color: theme.colors.text }]}>
+              {activeStation.name}
+            </Text>
+            <TouchableOpacity onPress={resetMapView}>
+              <Ionicons name="close-circle" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.stationDetailRow}>
+            <Text style={[styles.stationLabel, { color: theme.colors.text }]}>Rzeka:</Text>
+            <Text style={[styles.stationValue, { color: theme.colors.text }]}>
+              {activeStation.river || "Brak danych"}
+            </Text>
+          </View>
+          
+          <View style={styles.stationDetailRow}>
+            <Text style={[styles.stationLabel, { color: theme.colors.text }]}>Poziom wody:</Text>
+            <Text style={[styles.stationValue, { color: theme.colors.text }]}>
+              {activeStation.level} cm
+            </Text>
+          </View>
+          
+          <View style={styles.stationDetailRow}>
+            <Text style={[styles.stationLabel, { color: theme.colors.text }]}>Poziom ostrzegawczy:</Text>
+            <Text style={[styles.stationValue, { color: theme.colors.text }]}>
+              {activeStation.warningLevel === 'nie określono' || activeStation.warningLevel === 888 
+                ? "nie określono" 
+                : `${activeStation.warningLevel} cm`}
+            </Text>
+          </View>
+          
+          <View style={styles.stationDetailRow}>
+            <Text style={[styles.stationLabel, { color: theme.colors.text }]}>Poziom alarmowy:</Text>
+            <Text style={[styles.stationValue, { color: theme.colors.text }]}>
+              {activeStation.alarmLevel === 'nie określono' || activeStation.alarmLevel === 999 
+                ? "nie określono" 
+                : `${activeStation.alarmLevel} cm`}
+            </Text>
+          </View>
+          
+          <View style={styles.stationDetailRow}>
+            <Text style={[styles.stationLabel, { color: theme.colors.text }]}>Status:</Text>
+            <View style={[
+              styles.statusIndicator, 
+              { backgroundColor: getStationColor(activeStation) }
+            ]}>
+              <Text style={styles.statusText}>
+                {activeStation.status === 'alarm' ? 'ALARMOWY' : 
+                 activeStation.status === 'warning' ? 'OSTRZEGAWCZY' : 'NORMALNY'}
+              </Text>
             </View>
           </View>
-        )}
-      </Animated.View>
+          
+          <TouchableOpacity 
+            style={[styles.detailsButton, { backgroundColor: theme.colors.primary }]}
+            onPress={goToStationDetails}
+          >
+            <Text style={styles.detailsButtonText}>Szczegóły stacji</Text>
+            <Ionicons name="chevron-forward" size={16} color="white" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Przycisk resetowania widoku */}
+      <TouchableOpacity 
+        style={[styles.resetButton, { backgroundColor: theme.colors.primary }]}
+        onPress={resetMapView}
+      >
+        <Ionicons name="refresh" size={20} color="white" />
+      </TouchableOpacity>
       
-      {/* Atrybucja OpenStreetMap (wymagana prawnie) */}
-      <View style={[styles.attributionContainer, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
-        <Text style={[styles.attributionText, { color: theme.colors.text }]}>
-          © OpenStreetMap contributors
-        </Text>
-      </View>
+     
     </View>
   );
 }
@@ -555,17 +871,19 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
   },
-  // Nowe style dla markerów
-  customMarkerContainer: {
+  markerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  customMarker: {
-    padding: 8,
-    borderWidth: 2,
-    borderColor: 'white',
+  marker: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'red',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
@@ -575,156 +893,148 @@ const styles = StyleSheet.create({
   markerText: {
     color: 'white',
     fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: 12,
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: -1, height: 1 },
     textShadowRadius: 2,
   },
-  // Legendę i atrybuty przesuwamy w prawo, aby zrobić miejsce dla przycisku
-  legendContainer: {
-    position: 'absolute',
-    bottom: 25,
-    left: 16,
-    width: 140,
-    borderRadius: 8,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    overflow: 'hidden',
-  },
-  legendHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
-  },
-  legendContent: {
-    padding: 12,
-  },
-  legendTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-  legendColor: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 8,
-  },
-  legendText: {
+  statsText: {
     fontSize: 12,
+    fontWeight: '500',
   },
-  // Przycisk trybu mapy
-  mapModeButton: {
+  stationPanel: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  // Przycisk lokalizacji do pokazywania najbliższych stacji
-  locationButton: {
-    position: 'absolute',
-    top: 70,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  attributionContainer: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  attributionText: {
-    fontSize: 10,
-  },
-  // Style dla sekcji najbliższych stacji z dodaniem nagłówka
-  nearbyStationsContainer: {
-    position: 'absolute',
-    bottom: 100,
-    left: 16,
-    right: 16,
-    borderRadius: 12,
-    elevation: 4,
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 16,
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    overflow: 'hidden', // Aby zawartość nie wychodziła poza zaokrąglone rogi
+    elevation: 5,
   },
-  nearbyStationsHeader: {
+  stationHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
-  },
-  nearbyStationsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  nearbyStationsContent: {
-    flex: 1,
-    paddingVertical: 4,
-  },
-  stationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
-  },
-  statusIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 10,
-  },
-  stationInfo: {
-    flex: 1,
+    marginBottom: 12,
   },
   stationName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  stationDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  stationLabel: {
+    width: 140,
     fontSize: 14,
     fontWeight: '500',
   },
-  riverName: {
+  stationValue: {
+    fontSize: 14,
+    flex: 1,
+  },
+  statusIndicator: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    color: 'white',
+    fontWeight: 'bold',
     fontSize: 12,
   },
-  stationDistance: {
-    marginHorizontal: 8,
+  detailsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
   },
-  distanceText: {
+  detailsButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  resetButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  // Style dla panelu statystyk
+  statsPanel: {
+    position: 'absolute',
+    top: 20, // Poniżej przycisku resetowania
+    left: 20,
+    padding: 12,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+    width: 200,
+  },
+  statsTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-  }
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    fontSize: 10,
+  },
+  statsTotal: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginVertical: 4,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    marginTop: 4,
+  },
+  filterButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
 });

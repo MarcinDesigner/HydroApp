@@ -72,7 +72,7 @@ export const ThemeProvider = ({ children }) => {
   const theme = {
     dark: isDarkMode,
     colors: isDarkMode ? {
-      primary: '#2196F3',
+      primary: '#0060D2',
       background: '#121212',
       card: '#1E1E1E',
       text: '#FFFFFF',
@@ -81,9 +81,9 @@ export const ThemeProvider = ({ children }) => {
       danger: '#F44336',
       warning: '#FFC107',
       safe: '#4CAF50',
-      info: '#2196F3',
+      info: '#0060D2',
     } : {
-      primary: '#2196F3',
+      primary: '#0060D2',
       background: '#F5F5F5',
       card: '#FFFFFF',
       text: '#212121',
@@ -92,7 +92,7 @@ export const ThemeProvider = ({ children }) => {
       danger: '#F44336',
       warning: '#FFC107',
       safe: '#4CAF50',
-      info: '#2196F3',
+      info: '#0060D2',
     },
   };
 

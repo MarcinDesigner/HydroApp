@@ -1,4 +1,3 @@
-// Plik: App.js - dodanie nowego ekranu Rzeki
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -11,6 +10,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemeProvider } from './app/context/ThemeContext';
 import { FavoritesProvider } from './app/context/FavoritesContext';
 import { RefreshProvider } from './app/context/RefreshContext';
+import { NotificationProvider } from './app/context/NotificationContext';
+import { AlertsProvider } from './app/context/AlertsContext';
+
+// Komponenty
+import AppNotificationWrapper from './app/components/AppNotificationWrapper';
 
 // Ekrany
 import SplashScreen from './app/screens/SplashScreen';
@@ -20,8 +24,11 @@ import StationDetails from './app/screens/StationDetails';
 import SettingsScreen from './app/screens/SettingsScreen';
 import FavoritesScreen from './app/screens/FavoritesScreen';
 import AlertsScreen from './app/screens/AlertsScreen';
-import RiversScreen from './app/screens/RiversScreen'; // Nowy ekran Rzeki
+import RiversScreen from './app/screens/RiversScreen'; // Ekran Rzeki
 import WidgetScreen from './app/screens/WidgetScreen';
+import PrivacyPolicyScreen from './app/screens/PrivacyPolicyScreen'; // Ekran Polityki Prywatności
+import AboutScreen from './app/screens/AboutScreen'; // Ekran O Aplikacji
+import HelpSupportScreen from './app/screens/HelpSupportScreen'; // Nowy ekran Pomocy i Wsparcia
 
 // Jeśli używasz danych hydrologicznych z pliku constants
 import { findStationLevels } from './app/constants/hydroLevels';
@@ -29,6 +36,15 @@ import { useWidgetListener } from './app/services/widgetListener';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Główny komponent zakładek z wrapperem powiadomień
+function WrappedMainTabs() {
+  return (
+    <AppNotificationWrapper>
+      <MainTabs />
+    </AppNotificationWrapper>
+  );
+}
 
 function MainTabs() {
   return (
@@ -51,10 +67,10 @@ function MainTabs() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#1E88E5',
+        tabBarActiveTintColor: '#0060D2',
         tabBarInactiveTintColor: 'gray',
         headerStyle: {
-          backgroundColor: '#1E88E5',
+          backgroundColor: '#0060D2',
         },
         headerTintColor: '#fff',
         headerTitleStyle: {
@@ -105,53 +121,73 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <FavoritesProvider>
-        <RefreshProvider>
-          <SafeAreaProvider>
-            <StatusBar barStyle="light-content" backgroundColor="#1976D2" />
-            <NavigationContainer>
-              <Stack.Navigator 
-                initialRouteName="Splash"
-                screenOptions={{
-                  headerStyle: {
-                    backgroundColor: '#1E88E5',
-                  },
-                  headerTintColor: '#fff',
-                  headerTitleStyle: {
-                    fontWeight: 'bold',
-                  },
-                }}
-              >
-                <Stack.Screen 
-                  name="Splash" 
-                  component={SplashScreen} 
-                  options={{ headerShown: false }} 
-                />
-                <Stack.Screen 
-                  name="Main" 
-                  component={MainTabs} 
-                  options={{ headerShown: false }} 
-                />
-                <Stack.Screen 
-                  name="StationDetails" 
-                  component={StationDetails} 
-                  options={({ route }) => ({ title: route.params?.stationName || 'Szczegóły stacji' })} 
-                />
-                <Stack.Screen 
-                  name="Settings" 
-                  component={SettingsScreen} 
-                  options={{ title: 'Ustawienia' }} 
-                />
-                <Stack.Screen 
-                  name="Widget" 
-                  component={WidgetScreen} 
-                  options={{ title: 'Widget' }} 
-                />
-              </Stack.Navigator>
-            </NavigationContainer>
-          </SafeAreaProvider>
-        </RefreshProvider>
-      </FavoritesProvider>
+      <RefreshProvider>
+        <FavoritesProvider>
+          <NotificationProvider>
+            <AlertsProvider>
+              <SafeAreaProvider>
+                <StatusBar barStyle="light-content" backgroundColor="#1976D2" />
+                <NavigationContainer>
+                  <Stack.Navigator 
+                    initialRouteName="Splash"
+                    screenOptions={{
+                      headerStyle: {
+                        backgroundColor: '#0060D2',
+                      },
+                      headerTintColor: '#fff',
+                      headerTitleStyle: {
+                        fontWeight: 'bold',
+                      },
+                    }}
+                  >
+                    <Stack.Screen 
+                      name="Splash" 
+                      component={SplashScreen} 
+                      options={{ headerShown: false }} 
+                    />
+                    <Stack.Screen 
+                      name="Main" 
+                      component={WrappedMainTabs} 
+                      options={{ headerShown: false }} 
+                    />
+                    <Stack.Screen 
+                      name="StationDetails" 
+                      component={StationDetails} 
+                      options={({ route }) => ({ title: route.params?.stationName || 'Szczegóły stacji' })} 
+                    />
+                    <Stack.Screen 
+                      name="Settings" 
+                      component={SettingsScreen} 
+                      options={{ title: 'Ustawienia' }} 
+                    />
+                    <Stack.Screen 
+                      name="Widget" 
+                      component={WidgetScreen} 
+                      options={{ title: 'Widget' }} 
+                    />
+                    {/* Nowe ekrany */}
+                    <Stack.Screen 
+                      name="PrivacyPolicy" 
+                      component={PrivacyPolicyScreen} 
+                      options={{ title: 'Polityka Prywatności' }} 
+                    />
+                    <Stack.Screen 
+                      name="About" 
+                      component={AboutScreen} 
+                      options={{ title: 'O aplikacji' }} 
+                    />
+                    <Stack.Screen 
+                      name="HelpSupport" 
+                      component={HelpSupportScreen} 
+                      options={{ title: 'Pomoc i wsparcie' }} 
+                    />
+                  </Stack.Navigator>
+                </NavigationContainer>
+              </SafeAreaProvider>
+            </AlertsProvider>
+          </NotificationProvider>
+        </FavoritesProvider>
+      </RefreshProvider>
     </ThemeProvider>
   );
 }

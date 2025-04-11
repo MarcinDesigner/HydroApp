@@ -59,7 +59,7 @@ const OdraRiverSystem = ({ stations, theme }) => {
   const riverStations = {
     'Odra': [
       "Strona czeska", "Chałupki", "Olza", "Krzyżanowice", "Racibórz-Miedonia", 
-      "Koźle", "Krapkowice", "Opole Groszowice", "Ujście Nysy Kłodzkiej", 
+      "Koźle", "Krapkowice", "Opole-Groszowice", "Ujście Nysy Kłodzkiej", 
       "Brzeg", "Oława", "Trestno", "Wrocław Odra", "Brzeg Dolny", 
       "Malczyce", "Ścinawa", "Głogów", "Nowa Sól", "Cigacice", 
       "Nietków", "Połęcko", "Biała Góra", "Słubice", "Kostrzyn n. Odrą", 

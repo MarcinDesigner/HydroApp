@@ -1,4 +1,4 @@
-// Plik: app/screens/FavoritesScreen.js
+// Plik: app/screens/FavoritesScreen.js (zaktualizowany)
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -7,9 +7,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useRefresh } from '../context/RefreshContext';
 import StationCard from '../components/StationCard';
-import WaterConditionInfo from '../components/WaterConditionInfo';
 import Loader from '../components/Loader';
-import { fetchStations } from '../api/stationsApi';
+import stationService from '../services/stationService';
 
 export default function FavoritesScreen() {
   const navigation = useNavigation();
@@ -19,6 +18,7 @@ export default function FavoritesScreen() {
   const [favoriteStations, setFavoriteStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadFavorites();
@@ -42,28 +42,29 @@ export default function FavoritesScreen() {
       setFavoriteStations([]);
       setLoading(false);
       setRefreshing(false);
+      setError(null);
       return;
     }
 
     try {
       if (!silent) {
         setRefreshing(true);
+        setError(null);
       }
       
-      const allStations = await fetchStations();
-      
-      // Filtruj tylko stacje, które są w ulubionych
-      const favorites = allStations.filter(station => 
-        favoriteIds.includes(station.id)
-      );
+      // Użyj serwisu stationService zamiast bezpośredniego wywołania API
+      const favorites = await stationService.getFavoriteStations(favoriteIds);
       
       setFavoriteStations(favorites);
       setLoading(false);
       setRefreshing(false);
     } catch (error) {
       console.error('Error loading favorites:', error);
-      setLoading(false);
-      setRefreshing(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+        setError('Nie udało się załadować ulubionych stacji. Spróbuj ponownie.');
+      }
     }
   };
 
@@ -96,24 +97,26 @@ export default function FavoritesScreen() {
     return <Loader message="Ładowanie ulubionych stacji..." />;
   }
 
+  if (error) {
+    return (
+      <View style={[styles.errorContainer, { backgroundColor: theme.colors.background }]}>
+        <Ionicons name="alert-circle-outline" size={64} color={theme.colors.danger} />
+        <Text style={[styles.errorText, { color: theme.colors.text }]}>{error}</Text>
+        <TouchableOpacity
+          style={[styles.refreshButton, { backgroundColor: theme.colors.primary }]}
+          onPress={() => loadFavorites()}
+        >
+          <Text style={styles.refreshButtonText}>Odśwież</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <FlatList
         data={favoriteStations}
         keyExtractor={(item) => item.id.toString()}
-        ListHeaderComponent={() => (
-          favoriteStations.length > 0 ? (
-            <>
-              {favoriteStations.map((station) => (
-                <WaterConditionInfo 
-                  key={`water-condition-${station.id}`}
-                  level={station.level} 
-                  theme={theme} 
-                />
-              ))}
-            </>
-          ) : null
-        )}
         renderItem={({ item }) => (
           <StationCard
             station={item}
@@ -123,12 +126,23 @@ export default function FavoritesScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing || isRefreshing}
-            onRefresh={loadFavorites}
+            onRefresh={() => loadFavorites()}
             colors={[theme.colors.primary]}
             tintColor={theme.colors.primary}
           />
         }
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[
+          styles.list,
+          favoriteStations.length === 0 && styles.emptyList
+        ]}
+        ListEmptyComponent={() => (
+          <View style={styles.noFavoritesContainer}>
+            <Text style={[styles.noFavoritesText, { color: theme.colors.text }]}>
+              Nie odnaleziono żadnych ulubionych stacji.
+              Sprawdź połączenie internetowe lub dodaj nowe stacje do ulubionych.
+            </Text>
+          </View>
+        )}
       />
     </View>
   );
@@ -140,6 +154,10 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+  },
+  emptyList: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   emptyContainer: {
     flex: 1,
@@ -158,4 +176,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginVertical: 16,
+  },
+  refreshButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  refreshButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  noFavoritesContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noFavoritesText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+  }
 });
