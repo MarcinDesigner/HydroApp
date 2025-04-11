@@ -58,7 +58,7 @@ const OdraRiverSystem = ({ stations, theme }) => {
   // Grupy stacji według rzek
   const riverStations = {
     'Odra': [
-      "Strona czeska", "Chałupki", "Olza", "Krzyżanowice", "Racibórz-Miedonia", 
+      "Chałupki", "Olza", "Krzyżanowice", "Racibórz-Miedonia", 
       "Koźle", "Krapkowice", "Opole-Groszowice", "Ujście Nysy Kłodzkiej", 
       "Brzeg", "Oława", "Trestno", "Wrocław Odra", "Brzeg Dolny", 
       "Malczyce", "Ścinawa", "Głogów", "Nowa Sól", "Cigacice", 
@@ -70,8 +70,8 @@ const OdraRiverSystem = ({ stations, theme }) => {
       "Nysa", "Kopice", "Skorogoszcz", "Ujście Nysy Kłodzkiej"
     ],
     'Widawa': [
-      "Widawa", "Zbytowa", "Krzyżanowice (Widawa)", 
-      "Wrocław (ujście Widawy)", "Wrocław Odra"
+      "Zbytowa", "Krzyżanowice", 
+      "Wrocław Odra"
     ],
     'Oława': [
       "Oława (rzeka)", "Zborowice", "Oława (miejscowość)", 
@@ -86,7 +86,7 @@ const OdraRiverSystem = ({ stations, theme }) => {
       "Jarnołtów", "Wrocław Odra"
     ],
     'Bóbr': [
-      "Bóbr", "Pilchowice", "Dąbrowa Bolesławiecka", 
+      "Pilchowice", "Dąbrowa Bolesławiecka", 
       "Szprotawa", "Żagań", "Dobroszów Wielki", 
       "Nowogród Bobrzański", "Stary Raduszec", "Połęcko"
     ]

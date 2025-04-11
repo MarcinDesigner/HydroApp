@@ -106,7 +106,32 @@ export const HYDRO_STATION_COORDINATES = {
   "150170290": { latitude: 50.6307882371267, longitude: 17.939698200123015 }, // Opole Groszowice
   "150180150": { latitude: 50.38049521969635, longitude: 18.540790809919745 }, // Pyskowice-Dzierżno Kłodnica
   "150180160": { latitude: 50.38230151329833, longitude: 18.543044823831504 }, // Pyskowice-Dzierżno Drama
- 
+  "153140030": { latitude: 53.257810051663135, longitude: 14.482472963101914 }, // Gryfino
+  "152140010": { latitude: 52.93875451264944, longitude: 14.144041567014048 }, // Bielinek
+  "152140020": { latitude: 52.76515658299761, longitude: 14.311073212763564 }, // Gozdowice
+  "152140090": { latitude: 51.961470009950034, longitude: 14.710657630612495 }, // Biała Góra
+  "152140130": { latitude: 52.05052970910082, longitude: 14.89583534770495 }, // Połecko
+  "152150050": { latitude: 52.0470932767105, longitude: 15.35203554233761 }, // nietkow
+  "152150130": { latitude: 52.030190833046085, longitude: 15.617936532682998 }, // Cigacice
+  "149180020":{ latitude: 49.928597898666794, longitude: 18.33238599884516 }, // Chałupki
+  "151170010":{ latitude: 51.17045342961488, longitude: 17.049382348508836 }, // Krzyżanowice
+  "149180300":{ latitude: 49.95394914976493, longitude: 18.327087662870046 }, // Olza
+  "150180060":{ latitude: 50.125246183090276, longitude: 18.232253901961517 }, // Racibórz-Miedonia
+  "150180030":{ latitude: 50.35253009605726, longitude: 18.145608145241294 }, // Koźle
+  "150170130":{ latitude: 50.818531372324856, longitude: 17.660122861422586 }, // Ujscie nysy
+  "150170090":{ latitude: 50.86088212305835, longitude: 17.48118313917552 }, // Brzeg
+  "150170040":{ latitude: 50.9444390388959, longitude: 17.30896603041942 }, // Oława
+  "151170030":{ latitude: 51.07970384302907, longitude: 17.156661148529686 }, // Trestno
+  "150160170":{ latitude: 50.31227688100171, longitude: 16.656739650914524 }, // Bystrzyca
+  "150160180":{ latitude: 50.44182839937502, longitude: 16.65866777015615 }, // Kłodzko
+  "150160220":{ latitude: 50.504715514840974, longitude: 16.74229423579278 }, // Bardo
+  "150170100":{ latitude: 50.636973369067945, longitude: 17.477148236450944 }, // Kopice
+  "150170140":{ latitude: 50.75862182805162, longitude: 17.675460309284578 }, // Skorogoszcz
+  "151170050":{ latitude: 51.109213853814126, longitude: 17.434107320250874 }, // Zbytowa
+
+
+
+
 
 };
 

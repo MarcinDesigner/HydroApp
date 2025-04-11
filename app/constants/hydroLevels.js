@@ -26,7 +26,7 @@
 
 export const HYDRO_LEVELS = [
       // --- dolnośląskie ---
-  { id: 151160180, stationName: "Kłodzko", warningLevel: 160, alarmLevel: 240, voivodeship: "dolnośląskie", riverId: "Nysa Kłodzka" },
+  { id: 150160180, stationName: "Kłodzko", warningLevel: 160, alarmLevel: 240, voivodeship: "dolnośląskie", riverId: "Nysa Kłodzka" },
   { id: 151150060, stationName: "Leśna", warningLevel: 70, alarmLevel: 100, voivodeship: "dolnośląskie", riverId: "Kwisa" },
   { id: 150160070, stationName: "Lubachów", warningLevel: 210, alarmLevel: 230, voivodeship: "dolnośląskie", riverId: "Bystrzyca" },
   { id: 150150060, stationName: "Pilchowice", warningLevel: 100, alarmLevel: 140, voivodeship: "dolnośląskie", riverId: "Bóbr" },
@@ -59,7 +59,6 @@ export const HYDRO_LEVELS = [
   { id: 151160200, stationName: "Korzeńsko", warningLevel: 220, alarmLevel: 260, voivodeship: "dolnośląskie", riverId: "Orla" },
   { id: 150150110, stationName: "Kowary", warningLevel: 100, alarmLevel: 150, voivodeship: "dolnośląskie", riverId: "Jedlica" },
   { id: 150160120, stationName: "Krasków", warningLevel: 200, alarmLevel: 250, voivodeship: "dolnośląskie", riverId: "Bystrzyca" },
-  { id: 151170010, stationName: "Krzyżanowice", warningLevel: 150, alarmLevel: 200, voivodeship: "dolnośląskie", riverId: "Widawa" },
   { id: 151170040, stationName: "Łąki", warningLevel: 280, alarmLevel: 310, voivodeship: "dolnośląskie", riverId: "Barycz" },
   { id: 150150020, stationName: "Mirsk", warningLevel: 160, alarmLevel: 200, voivodeship: "dolnośląskie", riverId: "Czarny Potok" },
   { id: 150160130, stationName: "Mościsko", warningLevel: 220, alarmLevel: 250, voivodeship: "dolnośląskie", riverId: "Piława" },
@@ -662,7 +661,7 @@ export const HYDRO_LEVELS = [
   { id: 149190020, stationName: "Kamesznica", warningLevel: 210, alarmLevel: 260, voivodeship: "śląskie", riverId: "Bystra" },
   { id: 150180250, stationName: "Kłodnica", warningLevel: "nie określono", alarmLevel: "nie określono", voivodeship: "śląskie", riverId: "Kłodnica" },
   { id: 150180270, stationName: "Kozłowa Góra", warningLevel: 90, alarmLevel: 120, voivodeship: "śląskie", riverId: "Brynica" },
-  { id: 149180010, stationName: "Krzyżanowice", warningLevel: 360, alarmLevel: 500, voivodeship: "śląskie", riverId: "Odra" },
+  { id: 151170010, stationName: "Krzyżanowice", warningLevel: 360, alarmLevel: 500, voivodeship: "śląskie", riverId: "Odra" },
   { id: 150190130, stationName: "Łagisza", warningLevel: 200, alarmLevel: 240, voivodeship: "śląskie", riverId: "Przemsza" },
   { id: 149180030, stationName: "Łaziska", warningLevel: "nie określono", alarmLevel: "nie określono", voivodeship: "śląskie", riverId: "Olza" },
   { id: 150180090, stationName: "Nędza", warningLevel: "nie określono", alarmLevel: "nie określono", voivodeship: "śląskie", riverId: "Sumina" },
@@ -835,7 +834,6 @@ export const HYDRO_LEVELS = [
  { id: 152160090, stationName: "Kościan", warningLevel: 180, alarmLevel: 210, voivodeship: "wielkopolskie", riverId: "Kanał Mosiński" },
  { id: 152160110, stationName: "Kowanówko", warningLevel: "nie określono", alarmLevel: "nie określono", voivodeship: "wielkopolskie", riverId: "Wełna" },
  { id: 151180060, stationName: "Kraszewice", warningLevel: 240, alarmLevel: 260, voivodeship: "wielkopolskie", riverId: "Łużyca" },
- { id: 152160010, stationName: "Krzyż", warningLevel: 360, alarmLevel: 400, voivodeship: "wielkopolskie", riverId: "Noteć" },
  { id: 152180100, stationName: "Łysek", warningLevel: "nie określono", alarmLevel: "nie określono", voivodeship: "wielkopolskie", riverId: "Noteć" },
  { id: 152150200, stationName: "Międzychód", warningLevel: 380, alarmLevel: 430, voivodeship: "wielkopolskie", riverId: "Warta" },
  { id: 152160130, stationName: "Mosina", warningLevel: 160, alarmLevel: 250, voivodeship: "wielkopolskie", riverId: "Kanał Mosiński" },

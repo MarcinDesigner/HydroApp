@@ -12,7 +12,8 @@ const API_SYNOP_URL = 'https://danepubliczne.imgw.pl/api/data/synop';
 // Twardokodowane poziomy dla stacji z problemami z API
 const HARDCODED_STATION_LEVELS = {
   "151160170": { level: 110 },
-  "152160130": { level: 160 }, // Brzeg Dolny 
+  "152160130": { level: 160 },
+  "151170010": { level: 150 },  
   // Możesz dodać więcej problematycznych stacji ID: wartość
 };
 
